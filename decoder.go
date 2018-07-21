@@ -7,14 +7,20 @@ import (
 const maxLoadBytes = (32 << (^uint(0) >> 63)) * 8 / 7 // max size of 7-th bits data
 
 type Decoder struct {
+	repo map[uint]*Template
+
 	data []byte
 	current *pmap
 
 	Debug bool
 }
 
-func NewDecoder(t *Template) *Decoder {
-	return &Decoder{}
+func NewDecoder(tmps ...*Template) *Decoder {
+	decoder := &Decoder{repo: make(map[uint]*Template)}
+	for _, t := range tmps {
+		decoder.repo[t.ID] = t
+	}
+	return decoder
 }
 
 func (d *Decoder) Decode(segment []byte) *Message {

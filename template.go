@@ -1,11 +1,9 @@
 package fast
 
-import "io"
-
 type Template struct {
-
+	ID uint
+	Name string
+	Instructions []*Instruction
 }
 
-func NewTemplate(r io.Reader) *Template {
-	return &Template{}
-}
+
