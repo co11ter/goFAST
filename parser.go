@@ -12,8 +12,8 @@ const (
 	tagString = "string"
 	tagInt32 = "int32"
 	tagUint32 = "uInt32"
-	tagInt64 = "int32"
-	tagUint64 = "uInt32"
+	tagInt64 = "int64"
+	tagUint64 = "uInt64"
 	tagDecimal = "decimal"
 	tagSequence = "sequence"
 	tagLength = "length"
@@ -28,6 +28,7 @@ const (
 	attrID = "id"
 	attrName = "name"
 	attrPresence = "presence"
+	attrValue = "value"
 
 	valueMandatory = "mandatory"
 	valueOptional = "optional"
@@ -119,15 +120,29 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) (instruction *Inst
 	return
 }
 
-// TODO set value by type
+// TODO add other types
+func newValue(token *xml.StartElement, typ InstructionType) interface{} {
+	for _, attr := range token.Attr {
+		if attr.Name.Local == attrValue {
+			switch typ {
+			case TypeString:
+				return attr.Value
+			}
+		}
+	}
+	return nil
+}
+
 func (p *xmlParser) parseOption(token *xml.StartElement, typ InstructionType) (opt InstructionOpt, value interface{}) {
 	switch token.Name.Local {
 	case tagConstant:
 		opt = OptConstant
-	case tagCopy:
-		opt = OptCopy
+		value = newValue(token, typ)
 	case tagDefault:
 		opt = OptDefault
+		value = newValue(token, typ)
+	case tagCopy:
+		opt = OptCopy
 	case tagDelta:
 		opt = OptDelta
 	case tagIncrement:
@@ -151,6 +166,23 @@ func (p *xmlParser) parseOption(token *xml.StartElement, typ InstructionType) (o
 func newInstruction(token *xml.StartElement) (*Instruction, error) {
 	instruction := &Instruction{}
 
+	switch token.Name.Local {
+	case tagString:
+		instruction.Type = TypeString
+	case tagInt32:
+		instruction.Type = TypeInt32
+	case tagInt64:
+		instruction.Type = TypeInt64
+	case tagUint32:
+		instruction.Type = TypeUint32
+	case tagUint64:
+		instruction.Type = TypeUint64
+	case tagDecimal:
+		instruction.Type = TypeDecimal
+	case tagSequence:
+		instruction.Type = TypeSequence
+	}
+
 	for _, attr := range token.Attr {
 		switch attr.Name.Local {
 		case attrName:
@@ -169,8 +201,6 @@ func newInstruction(token *xml.StartElement) (*Instruction, error) {
 				instruction.Presence = PresenceOptional
 			}
 		}
-		// TODO set type
-
 	}
 
 	return instruction, nil

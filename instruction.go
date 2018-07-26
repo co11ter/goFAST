@@ -11,6 +11,8 @@ const (
 	TypeUint64
 	TypeInt64
 	TypeString
+	TypeDecimal
+	TypeSequence
 
 	OptDefault InstructionOpt = iota
 	OptConstant

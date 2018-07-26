@@ -35,11 +35,15 @@ func (d *Decoder) Decode(segment []byte, msg interface{}) {
 
 	d.log("pmap: ", utoi(d.data), *d.current)
 
-	templateID := d.parseTemplateID()
+	if d.current.isNextBitSet() {
+		templateID := d.parseTemplateID()
+		d.log("template: ", utoi(d.data), templateID)
 
-	d.log("template: ", utoi(d.data), templateID)
 
-	return &Message{}
+	}
+
+
+	return
 }
 
 func (d *Decoder) parsePmap() bool {
@@ -93,6 +97,11 @@ func (d *Decoder) log(a ...interface{}) {
 type pmap struct {
 	bitmap uint
 	mask uint
+}
+
+func (p *pmap) isNextBitSet() bool {
+	p.mask >>= 1
+	return (p.bitmap & p.mask) != 0;
 }
 
 // ------------
