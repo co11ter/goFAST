@@ -109,7 +109,17 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) (instruction *Inst
 		}
 
 		if start, ok := token.(xml.StartElement); ok {
-			instruction.Opt, instruction.Value = p.parseOption(&start, instruction.Type)
+			if instruction.Type == TypeSequence {
+
+				inner, err := p.parseInstruction(&start)
+				if err != nil {
+					return instruction, err
+				}
+				instruction.Instructions = append(instruction.Instructions, inner)
+
+			} else {
+				instruction.Opt, instruction.Value = p.parseOption(&start, instruction.Type)
+			}
 		}
 
 		if _, ok := token.(xml.EndElement); ok {
@@ -118,19 +128,6 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) (instruction *Inst
 	}
 
 	return
-}
-
-// TODO add other types
-func newValue(token *xml.StartElement, typ InstructionType) interface{} {
-	for _, attr := range token.Attr {
-		if attr.Name.Local == attrValue {
-			switch typ {
-			case TypeString:
-				return attr.Value
-			}
-		}
-	}
-	return nil
 }
 
 func (p *xmlParser) parseOption(token *xml.StartElement, typ InstructionType) (opt InstructionOpt, value interface{}) {
@@ -223,4 +220,17 @@ func newTemplate(token *xml.StartElement) (*Template, error) {
 	}
 
 	return template, nil
+}
+
+// TODO add other types
+func newValue(token *xml.StartElement, typ InstructionType) interface{} {
+	for _, attr := range token.Attr {
+		if attr.Name.Local == attrValue {
+			switch typ {
+			case TypeString:
+				return attr.Value
+			}
+		}
+	}
+	return nil
 }

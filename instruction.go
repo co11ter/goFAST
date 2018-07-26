@@ -30,5 +30,6 @@ type Instruction struct {
 	Presence InstructionPresence
 	Type InstructionType
 	Opt InstructionOpt
+	Instructions []*Instruction
 	Value interface{}
 }
