@@ -23,7 +23,7 @@ func NewDecoder(tmps ...*Template) *Decoder {
 	return decoder
 }
 
-func (d *Decoder) Decode(segment []byte) *Message {
+func (d *Decoder) Decode(segment []byte, msg interface{}) {
 	d.data = segment
 
 	d.log("data: ", utoi(d.data))
