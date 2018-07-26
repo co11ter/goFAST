@@ -33,3 +33,8 @@ type Instruction struct {
 	Instructions []*Instruction
 	Value interface{}
 }
+
+// TODO
+func (i *Instruction) Visit(data *[]byte) interface{} {
+	return nil
+}

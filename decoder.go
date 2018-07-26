@@ -2,9 +2,14 @@ package fast
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
 )
 
-const maxLoadBytes = (32 << (^uint(0) >> 63)) * 8 / 7 // max size of 7-th bits data
+const (
+	maxLoadBytes = (32 << (^uint(0) >> 63)) * 8 / 7 // max size of 7-th bits data
+	structTag = "fast"
+)
 
 type Decoder struct {
 	repo map[uint]*Template
@@ -35,15 +40,44 @@ func (d *Decoder) Decode(segment []byte, msg interface{}) {
 
 	d.log("pmap: ", utoi(d.data), *d.current)
 
+	var templateID uint
+
 	if d.current.isNextBitSet() {
-		templateID := d.parseTemplateID()
+		templateID = d.parseTemplateID()
 		d.log("template: ", utoi(d.data), templateID)
-
-
 	}
 
+	tpl, ok := d.repo[uint(templateID)]
+	if !ok {
+		return
+	}
+
+	d.parseFields(tpl, msg)
 
 	return
+}
+
+func (d *Decoder) parseFields(tpl *Template, msg interface{}) {
+	msgMap := make(map[uint]int)
+
+	tm := reflect.TypeOf(msg)
+	for i := 0; i < tm.NumField(); i++ {
+		field := tm.Field(i)
+		if tag, ok := field.Tag.Lookup(structTag); ok {
+			if tag != "" {
+				id, err := strconv.Atoi(tag)
+				if err !=nil {
+					panic(err)
+				}
+				msgMap[uint(id)] = i
+			}
+		}
+	}
+
+	vm := reflect.ValueOf(msg).Elem()
+	for field := range tpl.Process(&d.data) {
+		vm.Set(reflect.ValueOf(field))
+	}
 }
 
 func (d *Decoder) parsePmap() bool {
@@ -72,7 +106,7 @@ func (d *Decoder) skipTail() {
 	}
 }
 
-func (d *Decoder) parseTemplateID() uint32 {
+func (d *Decoder) parseTemplateID() uint {
 	i := 0
 	id := uint32(d.data[i] & 0x7F)
 
@@ -83,7 +117,7 @@ func (d *Decoder) parseTemplateID() uint32 {
 	}
 
 	d.data = d.data[i+1:]
-	return id
+	return uint(id)
 }
 
 func (d *Decoder) log(a ...interface{}) {
