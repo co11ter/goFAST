@@ -60,7 +60,7 @@ func (d *Decoder) Decode(segment []byte, msg interface{}) {
 func (d *Decoder) parseFields(tpl *Template, msg interface{}) {
 	msgMap := make(map[uint]int)
 
-	tm := reflect.TypeOf(msg)
+	tm := reflect.TypeOf(msg).Elem()
 	for i := 0; i < tm.NumField(); i++ {
 		field := tm.Field(i)
 		if tag, ok := field.Tag.Lookup(structTag); ok {
@@ -76,7 +76,9 @@ func (d *Decoder) parseFields(tpl *Template, msg interface{}) {
 
 	vm := reflect.ValueOf(msg).Elem()
 	for field := range tpl.Process(&d.data) {
-		vm.Set(reflect.ValueOf(field))
+		if v, ok := msgMap[field.ID]; ok {
+			vm.Field(v).Set(reflect.ValueOf(field.Value))
+		}
 	}
 }
 

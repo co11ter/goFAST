@@ -7,7 +7,7 @@ type Template struct {
 }
 
 type Field struct {
-	ID uint
+	ID uint // instruction id
 	Value interface{}
 }
 
