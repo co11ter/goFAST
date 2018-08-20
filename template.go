@@ -11,7 +11,7 @@ type Field struct {
 	Value interface{}
 }
 
-func (t *Template) Process(data *[]byte) <-chan *Field {
+func (t *Template) Process(data *buffer) <-chan *Field {
 	ch := make(chan *Field)
 	go func() {
 		defer close(ch)

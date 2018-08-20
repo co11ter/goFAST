@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"errors"
 )
 
 const (
@@ -14,7 +15,7 @@ const (
 type Decoder struct {
 	repo map[uint]*Template
 
-	data []byte
+	buf *buffer
 	current *pmap
 
 	Debug bool
@@ -29,22 +30,22 @@ func NewDecoder(tmps ...*Template) *Decoder {
 }
 
 func (d *Decoder) Decode(segment []byte, msg interface{}) {
-	d.data = segment
+	d.buf = newBuffer(segment)
 
-	d.log("data: ", utoi(d.data))
+	d.log("data: ", utoi(d.buf.data))
 
 	if !d.parsePmap() {
 		d.skipTail()
-		d.log("tail: ", utoi(d.data))
+		d.log("tail: ", utoi(d.buf.data))
 	}
 
-	d.log("pmap: ", utoi(d.data), *d.current)
+	d.log("pmap: ", utoi(d.buf.data), *d.current)
 
 	var templateID uint
 
 	if d.current.isNextBitSet() {
 		templateID = d.parseTemplateID()
-		d.log("template: ", utoi(d.data), templateID)
+		d.log("template: ", utoi(d.buf.data), templateID)
 	}
 
 	tpl, ok := d.repo[uint(templateID)]
@@ -75,7 +76,7 @@ func (d *Decoder) parseFields(tpl *Template, msg interface{}) {
 	}
 
 	vm := reflect.ValueOf(msg).Elem()
-	for field := range tpl.Process(&d.data) {
+	for field := range tpl.Process(d.buf) {
 		if v, ok := msgMap[field.ID]; ok {
 			vm.Field(v).Set(reflect.ValueOf(field.Value))
 		}
@@ -87,11 +88,11 @@ func (d *Decoder) parsePmap() bool {
 	d.current.mask = 1;
 	for i:=0; i < maxLoadBytes; i++ {
 		d.current.bitmap <<= 7
-		d.current.bitmap |= uint(d.data[i]) & '\x7F'
+		d.current.bitmap |= uint(d.buf.data[i]) & '\x7F'
 		d.current.mask <<= 7
 
-		if ('\x80' == (d.data[i] & '\x80')) {
-			d.data = d.data[i+1:]
+		if ('\x80' == (d.buf.data[i] & '\x80')) {
+			d.buf.data = d.buf.data[i+1:]
 			return true;
 		}
 	}
@@ -100,26 +101,21 @@ func (d *Decoder) parsePmap() bool {
 }
 
 func (d *Decoder) skipTail() {
-	for i, b := range d.data {
+	for i, b := range d.buf.data {
 		if 0 == (b & 0x80) {
-			d.data = d.data[i+1:]
+			d.buf.data = d.buf.data[i+1:]
 			return
 		}
 	}
 }
 
 func (d *Decoder) parseTemplateID() uint {
-	i := 0
-	id := uint32(d.data[i] & 0x7F)
+	var tid uint32
 
-	for (d.data[i] & 0x80) == 0 {
-		id <<= 7;
-		i++
-		id |= uint32(d.data[i] & 0x7F);
+	if !d.buf.decode(&tid) {
+		panic(errors.New("fatal"))
 	}
-
-	d.data = d.data[i+1:]
-	return uint(id)
+	return uint(tid)
 }
 
 func (d *Decoder) log(a ...interface{}) {

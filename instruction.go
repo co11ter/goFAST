@@ -35,7 +35,7 @@ type Instruction struct {
 }
 
 // TODO
-func (ins *Instruction) Visit(data *[]byte) interface{} {
+func (ins *Instruction) Visit(data *buffer) interface{} {
 	if ins.Opt == OptConstant {
 		return ins.Value
 	}
