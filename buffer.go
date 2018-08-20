@@ -1,7 +1,5 @@
 package fast
 
-import "reflect"
-
 type buffer struct {
 	data []byte
 }
@@ -10,8 +8,7 @@ func newBuffer(data []byte) *buffer {
 	return &buffer{data: data}
 }
 
-// value should be pointer
-func (b *buffer) decode(value interface{}) bool {
+func (b *buffer) decodeUint32() uint32 {
 	i := 0
 	tmp := uint32(b.data[i] & 0x7F)
 
@@ -22,6 +19,5 @@ func (b *buffer) decode(value interface{}) bool {
 	}
 
 	b.data = b.data[i+1:]
-	reflect.ValueOf(value).Elem().Set(reflect.ValueOf(tmp))
-	return true
+	return tmp
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"errors"
 )
 
 const (
@@ -44,7 +43,7 @@ func (d *Decoder) Decode(segment []byte, msg interface{}) {
 	var templateID uint
 
 	if d.current.isNextBitSet() {
-		templateID = d.parseTemplateID()
+		templateID = uint(d.buf.decodeUint32())
 		d.log("template: ", utoi(d.buf.data), templateID)
 	}
 
@@ -107,15 +106,6 @@ func (d *Decoder) skipTail() {
 			return
 		}
 	}
-}
-
-func (d *Decoder) parseTemplateID() uint {
-	var tid uint32
-
-	if !d.buf.decode(&tid) {
-		panic(errors.New("fatal"))
-	}
-	return uint(tid)
 }
 
 func (d *Decoder) log(a ...interface{}) {
