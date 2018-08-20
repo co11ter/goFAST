@@ -1,5 +1,7 @@
 package fast
 
+import "errors"
+
 type InstructionType int
 type InstructionOpt int
 type InstructionPresence int
@@ -35,9 +37,17 @@ type Instruction struct {
 }
 
 // TODO
-func (ins *Instruction) Visit(data *buffer) interface{} {
+func (ins *Instruction) Visit(buf *buffer) interface{} {
 	if ins.Opt == OptConstant {
 		return ins.Value
+	}
+
+	if ins.Type == TypeUint32 {
+		var value uint32
+		if !buf.decode(&value) {
+			panic(errors.New("decode fail"))
+		}
+		return value
 	}
 	return nil
 }

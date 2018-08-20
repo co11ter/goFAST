@@ -11,14 +11,14 @@ type Field struct {
 	Value interface{}
 }
 
-func (t *Template) Process(data *buffer) <-chan *Field {
+func (t *Template) Process(buf *buffer) <-chan *Field {
 	ch := make(chan *Field)
 	go func() {
 		defer close(ch)
 
 		var value interface{}
 		for _, instruction := range t.Instructions {
-			value = instruction.Visit(data)
+			value = instruction.Visit(buf)
 			ch <- &Field{ID: instruction.ID, Value: value}
 		}
 	}()
