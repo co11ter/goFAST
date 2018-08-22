@@ -43,5 +43,6 @@ func (ins *Instruction) Visit(buf *buffer) interface{} {
 	if ins.Type == TypeUint32 {
 		return buf.decodeUint32()
 	}
+
 	return nil
 }

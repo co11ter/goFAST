@@ -2,13 +2,10 @@ package fast
 
 import (
 	"fmt"
-	"reflect"
-	"strconv"
 )
 
 const (
 	maxLoadBytes = (32 << (^uint(0) >> 63)) * 8 / 7 // max size of 7-th bits data
-	structTag = "fast"
 )
 
 type Decoder struct {
@@ -58,27 +55,10 @@ func (d *Decoder) Decode(segment []byte, msg interface{}) {
 }
 
 func (d *Decoder) parseFields(tpl *Template, msg interface{}) {
-	msgMap := make(map[uint]int)
+	m := newMsg(msg)
 
-	tm := reflect.TypeOf(msg).Elem()
-	for i := 0; i < tm.NumField(); i++ {
-		field := tm.Field(i)
-		if tag, ok := field.Tag.Lookup(structTag); ok {
-			if tag != "" {
-				id, err := strconv.Atoi(tag)
-				if err !=nil {
-					panic(err)
-				}
-				msgMap[uint(id)] = i
-			}
-		}
-	}
-
-	vm := reflect.ValueOf(msg).Elem()
 	for field := range tpl.Process(d.buf) {
-		if v, ok := msgMap[field.ID]; ok {
-			vm.Field(v).Set(reflect.ValueOf(field.Value))
-		}
+		m.Assign(field)
 	}
 }
 
