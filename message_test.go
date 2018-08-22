@@ -28,3 +28,38 @@ func Test_newMsg(t *testing.T) {
 		t.Fatal("invalid parsing tag '33'")
 	}
 }
+
+func TestMessage_Assign(t *testing.T) {
+	type Sequense struct {
+		Test uint32 `fast:"33"`
+	}
+	type Msg struct {
+		Test uint32 `fast:"11"`
+		Seq []Sequense `fast:"22"`
+	}
+
+	var msg Msg
+	m := newMsg(&msg)
+
+	field := &Field{
+		ID: 11,
+		Value: uint32(1),
+	}
+
+	m.Assign(field)
+
+	if msg.Test != uint32(1) {
+		t.Fatal("invalid assigning to 'msg.Test' field")
+	}
+
+	field = &Field{
+		ID: 33,
+		Value: uint32(2),
+	}
+
+	m.AssignSlice(field, 0)
+
+	if len(msg.Seq) !=1 || msg.Seq[0].Test != uint32(2) {
+		t.Fatal("invalid assigning to 'msg.Seq[0].Test' field")
+	}
+}

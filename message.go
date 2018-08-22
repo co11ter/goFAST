@@ -13,17 +13,6 @@ type message struct {
 	msg    interface{}
 }
 
-func (m *message) Assign(field *Field) {
-	if v, ok := m.tagMap[strconv.Itoa(int(field.ID))]; ok {
-		_ = v
-		//m.rValue.Field(v).Set(reflect.ValueOf(field.Value))
-	}
-	if v, ok := m.tagMap[field.Name]; ok {
-		_ = v
-		//m.rValue.Field(v).Set(reflect.ValueOf(field.Value))
-	}
-}
-
 func newMsg(msg interface{}) *message {
 
 	rv := reflect.ValueOf(msg)
@@ -33,11 +22,57 @@ func newMsg(msg interface{}) *message {
 
 	rt := reflect.TypeOf(msg).Elem()
 
-	m := &message{tagMap: make(map[string][]int)}
+	m := &message{tagMap: make(map[string][]int), msg: msg}
 
 	parseType(rt, m.tagMap, nil)
 
 	return m
+}
+
+func (m *message) Assign(field *Field) {
+	path := m.lookUpPath(field)
+	if len(path) == 0 {
+		return
+	}
+
+	reflect.ValueOf(m.msg).Elem().Field(path[0]).Set(reflect.ValueOf(field.Value))
+}
+
+func (m *message) AssignSlice(field *Field, index int) {
+	path := m.lookUpPath(field)
+	if len(path) < 2 {
+		return
+	}
+
+	value := reflect.ValueOf(m.msg).Elem().Field(path[0])
+	if index >= value.Cap() {
+		newCap := value.Cap() + value.Cap()/2
+		if newCap < 4 {
+			newCap = 4
+		}
+		newValue := reflect.MakeSlice(value.Type(), value.Len(), newCap)
+		reflect.Copy(newValue, value)
+		value.Set(newValue)
+	}
+
+	if index >= value.Len() {
+		value.SetLen(index + 1)
+	}
+
+	value.Index(index).Field(path[1]).Set(reflect.ValueOf(field.Value))
+}
+
+func (m *message) lookUpPath(field *Field) []int {
+	name := strconv.Itoa(int(field.ID))
+	if v, ok := m.tagMap[name]; ok {
+		return v
+	}
+
+	if v, ok := m.tagMap[field.Name]; ok {
+		return v
+	}
+
+	return []int{}
 }
 
 func parseType(rt reflect.Type, tagMap map[string][]int, index *int) {
@@ -46,7 +81,7 @@ func parseType(rt reflect.Type, tagMap map[string][]int, index *int) {
 
 		field := rt.Field(i)
 
-		name := lookUp(field)
+		name := lookUpTag(field)
 		if name == "" {
 			continue
 		}
@@ -67,7 +102,7 @@ func parseType(rt reflect.Type, tagMap map[string][]int, index *int) {
 	}
 }
 
-func lookUp(field reflect.StructField) string {
+func lookUpTag(field reflect.StructField) string {
 	if tag, ok := field.Tag.Lookup(structTag); ok && tag != "" {
 		if tag == "-" {
 			return ""
