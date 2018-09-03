@@ -31,21 +31,28 @@ func newMsg(msg interface{}) *message {
 
 func (m *message) Assign(field *Field) {
 	path := m.lookUpPath(field)
+
 	if len(path) == 0 {
 		return
 	}
 
-	reflect.ValueOf(m.msg).Elem().Field(path[0]).Set(reflect.ValueOf(field.Value))
-}
-
-func (m *message) AssignSlice(field *Field, index int) {
-	path := m.lookUpPath(field)
-	if len(path) < 2 {
+	if len(path) ==1 {
+		m.assignElem(field, path)
 		return
 	}
 
+	if len(path) == 2 {
+		m.assignSlice(field, path)
+	}
+}
+
+func (m *message) assignElem(field *Field, path []int) {
+	reflect.ValueOf(m.msg).Elem().Field(path[0]).Set(reflect.ValueOf(field.Value))
+}
+
+func (m *message) assignSlice(field *Field, path []int) {
 	value := reflect.ValueOf(m.msg).Elem().Field(path[0])
-	if index >= value.Cap() {
+	if field.Index >= value.Cap() {
 		newCap := value.Cap() + value.Cap()/2
 		if newCap < 4 {
 			newCap = 4
@@ -55,11 +62,11 @@ func (m *message) AssignSlice(field *Field, index int) {
 		value.Set(newValue)
 	}
 
-	if index >= value.Len() {
-		value.SetLen(index + 1)
+	if field.Index >= value.Len() {
+		value.SetLen(field.Index + 1)
 	}
 
-	value.Index(index).Field(path[1]).Set(reflect.ValueOf(field.Value))
+	value.Index(field.Index).Field(path[1]).Set(reflect.ValueOf(field.Value))
 }
 
 func (m *message) lookUpPath(field *Field) []int {

@@ -13,6 +13,7 @@ const (
 	TypeString
 	TypeDecimal
 	TypeSequence
+	TypeLength
 
 	OptDefault InstructionOpt = iota
 	OptConstant
@@ -40,8 +41,20 @@ func (ins *Instruction) Visit(buf *buffer) interface{} {
 		return ins.Value
 	}
 
+	if ins.Type == TypeLength {
+		return buf.decodeUint32()
+	}
+
 	if ins.Type == TypeUint32 {
 		return buf.decodeUint32()
+	}
+
+	if ins.Type == TypeUint64 {
+		return buf.decodeUint64()
+	}
+
+	if ins.Type == TypeString {
+		buf.data = buf.data[1:] // TODO
 	}
 
 	return nil

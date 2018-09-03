@@ -178,6 +178,8 @@ func newInstruction(token *xml.StartElement) (*Instruction, error) {
 		instruction.Type = TypeDecimal
 	case tagSequence:
 		instruction.Type = TypeSequence
+	case tagLength:
+		instruction.Type = TypeLength
 	}
 
 	for _, attr := range token.Attr {
