@@ -36,13 +36,14 @@ func (d *Decoder) Decode(segment []byte, msg interface{}) {
 
 	d.log("data: ", utohex(d.buf.data))
 
+	d.log("pmap parsing: ", utohex(d.buf.data))
 	d.parsePmap()
-	d.log("pmap: ", utohex(d.buf.data), *d.current)
+	d.log("  pmap parsed: ", utohex(d.buf.data), *d.current)
 
 	var templateID uint
 
 	if d.current.isNextBitSet() {
-		templateID = uint(d.buf.decodeUint32())
+		templateID = uint(d.buf.decodeUint32(false))
 		d.log("template: ", utohex(d.buf.data), templateID)
 	}
 
@@ -64,34 +65,38 @@ func (d *Decoder) parseFields(tpl *Template, msg interface{}) {
 	for _, instruction := range tpl.Instructions {
 		if instruction.Type == TypeSequence {
 
+			d.log("sequence start:")
+
 			length := int(instruction.Instructions[0].Visit(d.buf).(uint32))
-			d.log("length", utohex(d.buf.data), length)
+			d.log("  length: ", utohex(d.buf.data), length)
 
 			if length > 0 {
 				tmp := *d.current
 				d.current = newPmap(d.buf)
 				d.prev = &tmp
-				d.log("pmap: ", utohex(d.buf.data), *d.current)
+				d.log("  pmap: ", utohex(d.buf.data), *d.current)
 			}
 
 			for i:=0; i<length; i++ {
 				for _, internal := range instruction.Instructions[1:] {
+
+					d.log("  parsing: ", utohex(d.buf.data), internal.Name)
 					value = internal.Visit(d.buf)
 
 					field = &Field{
 						ID: internal.ID,
 						Name: internal.Name,
 						Value: value,
-						Index: i,
 					}
-					d.log("sequence", utohex(d.buf.data), field)
-					m.Assign(field)
+					d.log("    parsed: ", utohex(d.buf.data), field.Name, field.Value)
+					m.AssignSlice(field, i)
 				}
 			}
 		} else {
+			d.log("parsing: ", utohex(d.buf.data), instruction.Name)
 			value = instruction.Visit(d.buf)
 			field := &Field{ID: instruction.ID, Name: instruction.Name, Value: value}
-			d.log("field", utohex(d.buf.data), field)
+			d.log("  parsed: ", utohex(d.buf.data), field.Name, field.Value)
 			m.Assign(field)
 		}
 	}
@@ -117,5 +122,13 @@ func utoi(d []byte) (r []int8) {
 }
 
 func utohex(d []byte) string {
-	return hex.EncodeToString(d)
+	var result string
+	str := hex.EncodeToString(d)
+	for i:=0; i<len(str); i++ {
+		if i%2==0 {
+			result += " "
+		}
+		result += string(str[i])
+	}
+	return result
 }

@@ -17,7 +17,7 @@ func (b *buffer) cutEmpty() {
 	}
 }
 
-func (b *buffer) decodeUint32() (result uint32) {
+func (b *buffer) decodeUint32(optional bool) (result uint32) {
 	i := 0
 	result = uint32(b.data[i] & 0x7F)
 
@@ -28,10 +28,14 @@ func (b *buffer) decodeUint32() (result uint32) {
 	}
 
 	b.data = b.data[i+1:]
+
+	if optional && result > 0 {
+		result--
+	}
 	return result
 }
 
-func (b *buffer) decodeUint64() (result uint64) {
+func (b *buffer) decodeUint64(optional bool) (result uint64) {
 	i := 0
 	result = uint64(b.data[i] & 0x7F)
 
@@ -42,6 +46,10 @@ func (b *buffer) decodeUint64() (result uint64) {
 	}
 
 	b.data = b.data[i+1:]
+
+	if optional && result > 0 {
+		result--
+	}
 	return result
 }
 

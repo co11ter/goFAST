@@ -42,15 +42,15 @@ func (ins *Instruction) Visit(buf *buffer) interface{} {
 	}
 
 	if ins.Type == TypeLength {
-		return buf.decodeUint32()
+		return buf.decodeUint32(ins.Presence == PresenceOptional)
 	}
 
 	if ins.Type == TypeUint32 {
-		return buf.decodeUint32()
+		return buf.decodeUint32(ins.Presence == PresenceOptional)
 	}
 
 	if ins.Type == TypeUint64 {
-		return buf.decodeUint64()
+		return buf.decodeUint64(ins.Presence == PresenceOptional)
 	}
 
 	if ins.Type == TypeString {

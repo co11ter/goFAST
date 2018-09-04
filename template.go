@@ -9,6 +9,5 @@ type Template struct {
 type Field struct {
 	ID uint // instruction id
 	Name string
-	Index int
 	Value interface{}
 }
