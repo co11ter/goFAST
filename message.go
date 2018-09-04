@@ -8,6 +8,12 @@ import (
 
 const structTag = "fast"
 
+type Field struct {
+	ID uint // instruction id
+	Name string
+	Value interface{}
+}
+
 type message struct {
 	tagMap map[string][]int
 	msg    interface{}

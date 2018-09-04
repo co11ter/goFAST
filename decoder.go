@@ -60,14 +60,12 @@ func (d *Decoder) Decode(segment []byte, msg interface{}) {
 func (d *Decoder) parseFields(tpl *Template, msg interface{}) {
 	m := newMsg(msg)
 
-	var value interface{}
-	var field *Field
 	for _, instruction := range tpl.Instructions {
 		if instruction.Type == TypeSequence {
 
 			d.log("sequence start:")
 
-			length := int(instruction.Instructions[0].Visit(d.buf).(uint32))
+			length := int(d.visit(instruction.Instructions[0]).Value.(uint32))
 			d.log("  length: ", utohex(d.buf.data), length)
 
 			if length > 0 {
@@ -81,25 +79,58 @@ func (d *Decoder) parseFields(tpl *Template, msg interface{}) {
 				for _, internal := range instruction.Instructions[1:] {
 
 					d.log("  parsing: ", utohex(d.buf.data), internal.Name)
-					value = internal.Visit(d.buf)
-
-					field = &Field{
-						ID: internal.ID,
-						Name: internal.Name,
-						Value: value,
-					}
+					field := d.visit(internal)
 					d.log("    parsed: ", utohex(d.buf.data), field.Name, field.Value)
 					m.AssignSlice(field, i)
 				}
 			}
 		} else {
 			d.log("parsing: ", utohex(d.buf.data), instruction.Name)
-			value = instruction.Visit(d.buf)
-			field := &Field{ID: instruction.ID, Name: instruction.Name, Value: value}
+			field := d.visit(instruction)
 			d.log("  parsed: ", utohex(d.buf.data), field.Name, field.Value)
 			m.Assign(field)
 		}
 	}
+}
+
+func (d *Decoder) visit(instruction *Instruction) *Field {
+	if instruction.Opt == OptConstant {
+		return &Field{
+			ID: instruction.ID,
+			Name: instruction.Name,
+			Value: instruction.Value,
+		}
+	}
+
+	if instruction.Type == TypeLength {
+		return &Field{
+			ID: instruction.ID,
+			Name: instruction.Name,
+			Value: d.buf.decodeUint32(instruction.Presence == PresenceOptional),
+		}
+	}
+
+	if instruction.Type == TypeUint32 {
+		return &Field{
+			ID: instruction.ID,
+			Name: instruction.Name,
+			Value: d.buf.decodeUint32(instruction.Presence == PresenceOptional),
+		}
+	}
+
+	if instruction.Type == TypeUint64 {
+		return &Field{
+			ID: instruction.ID,
+			Name: instruction.Name,
+			Value: d.buf.decodeUint64(instruction.Presence == PresenceOptional),
+		}
+	}
+
+	if instruction.Type == TypeString {
+		d.buf.data = d.buf.data[1:] // TODO
+	}
+
+	return &Field{ID: instruction.ID, Name: instruction.Name, Value: nil}
 }
 
 func (d *Decoder) parsePmap() {
