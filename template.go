@@ -99,7 +99,7 @@ type xmlParser struct {
 	decoder *xml.Decoder
 }
 
-func ParseXmlTemplate(reader io.Reader) ([]*Template, error) {
+func ParseXmlTemplate(reader io.Reader) []*Template {
 	return newXmlParser(reader).Parse()
 }
 
@@ -107,45 +107,36 @@ func newXmlParser(reader io.Reader) *xmlParser {
 	return &xmlParser{decoder: xml.NewDecoder(reader)}
 }
 
-func (p *xmlParser) Parse() (templates []*Template, err error) {
+func (p *xmlParser) Parse() (templates []*Template) {
 	for {
 		token, err := p.decoder.Token()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return templates, err
+			panic(err)
 		}
 
 		if start, ok := token.(xml.StartElement); ok && start.Name.Local == tagTemplate{
-			template, err := p.parseTemplate(&start)
-			if err != nil {
-				return templates, err
-			}
+			template := p.parseTemplate(&start)
 			templates = append(templates, template)
 		}
 	}
 
-	return templates, nil
+	return templates
 }
 
-func (p *xmlParser) parseTemplate(token *xml.StartElement) (template *Template, err error) {
-	template, err = newTemplate(token)
-	if err != nil {
-		return
-	}
+func (p *xmlParser) parseTemplate(token *xml.StartElement) *Template {
+	template := newTemplate(token)
 
 	for {
 		token, err := p.decoder.Token()
 		if err != nil {
-			return template, err
+			panic(err)
 		}
 
 		if start, ok := token.(xml.StartElement); ok {
-			instruction, err := p.parseInstruction(&start)
-			if err != nil {
-				return template, err
-			}
+			instruction := p.parseInstruction(&start)
 			template.Instructions = append(template.Instructions, instruction)
 		}
 
@@ -154,28 +145,21 @@ func (p *xmlParser) parseTemplate(token *xml.StartElement) (template *Template, 
 		}
 	}
 
-	return
+	return template
 }
 
-func (p *xmlParser) parseInstruction(token *xml.StartElement) (instruction *Instruction, err error) {
-	instruction, err = newInstruction(token)
-	if err != nil {
-		return
-	}
+func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
+	instruction := newInstruction(token)
 
 	for {
 		token, err := p.decoder.Token()
 		if err != nil {
-			return instruction, err
+			panic(err)
 		}
 
 		if start, ok := token.(xml.StartElement); ok {
 			if instruction.Type == TypeSequence {
-
-				inner, err := p.parseInstruction(&start)
-				if err != nil {
-					return instruction, err
-				}
+				inner := p.parseInstruction(&start)
 				instruction.Instructions = append(instruction.Instructions, inner)
 
 			} else {
@@ -188,7 +172,7 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) (instruction *Inst
 		}
 	}
 
-	return
+	return instruction
 }
 
 func (p *xmlParser) parseOption(token *xml.StartElement, typ InstructionType) (opt InstructionOpt, value interface{}) {
@@ -210,7 +194,7 @@ func (p *xmlParser) parseOption(token *xml.StartElement, typ InstructionType) (o
 	for {
 		token, err := p.decoder.Token()
 		if err != nil {
-			return opt, err
+			panic(err)
 		}
 
 		if _, ok := token.(xml.EndElement); ok {
@@ -221,7 +205,7 @@ func (p *xmlParser) parseOption(token *xml.StartElement, typ InstructionType) (o
 	return
 }
 
-func newInstruction(token *xml.StartElement) (*Instruction, error) {
+func newInstruction(token *xml.StartElement) *Instruction {
 	instruction := &Instruction{Opt: OptNone}
 
 	switch token.Name.Local {
@@ -250,7 +234,7 @@ func newInstruction(token *xml.StartElement) (*Instruction, error) {
 		case attrID:
 			id, err := strconv.Atoi(attr.Value)
 			if err != nil {
-				return instruction, err
+				panic(err)
 			}
 			instruction.ID = uint(id)
 		case attrPresence:
@@ -263,10 +247,10 @@ func newInstruction(token *xml.StartElement) (*Instruction, error) {
 		}
 	}
 
-	return instruction, nil
+	return instruction
 }
 
-func newTemplate(token *xml.StartElement) (*Template, error) {
+func newTemplate(token *xml.StartElement) *Template {
 	template := &Template{}
 
 	for _, attr := range token.Attr {
@@ -276,22 +260,45 @@ func newTemplate(token *xml.StartElement) (*Template, error) {
 		case attrID:
 			id, err := strconv.Atoi(attr.Value)
 			if err != nil {
-				return template, err
+				panic(err)
 			}
 			template.ID = uint(id)
 		}
 	}
 
-	return template, nil
+	return template
 }
 
-// TODO add other types
 func newValue(token *xml.StartElement, typ InstructionType) interface{} {
 	for _, attr := range token.Attr {
 		if attr.Name.Local == attrValue {
 			switch typ {
 			case TypeString:
 				return attr.Value
+			case TypeUint64:
+				value, err := strconv.ParseUint(attr.Value, 10, 64)
+				if err != nil {
+					panic(err)
+				}
+				return value
+			case TypeUint32:
+				value, err := strconv.ParseUint(attr.Value, 10, 32)
+				if err != nil {
+					panic(err)
+				}
+				return uint32(value)
+			case TypeInt64:
+				value, err := strconv.ParseInt(attr.Value, 10, 64)
+				if err != nil {
+					panic(err)
+				}
+				return value
+			case TypeInt32:
+				value, err := strconv.ParseInt(attr.Value, 10, 32)
+				if err != nil {
+					panic(err)
+				}
+				return int32(value)
 			}
 		}
 	}
