@@ -1,5 +1,7 @@
 package fast
 
+import "encoding/hex"
+
 type buffer struct {
 	data []byte
 }
@@ -53,7 +55,7 @@ func (b *buffer) decodeUint64(optional bool) (result uint64) {
 	return result
 }
 
-func (b *buffer) decodeString() (result string) {
+func  decodeString() (result string) {
 	/*i := 0
 	result = string(b.data)
 	if (b.data[i] & 0x80) == 0 {
@@ -62,4 +64,23 @@ func (b *buffer) decodeString() (result string) {
 		}
 	}*/
 	return ""
+}
+
+func (b *buffer) Int() (r []int8) {
+	for _, x := range b.data {
+		r = append(r, int8(x))
+	}
+	return
+}
+
+func (b *buffer) Hex() string {
+	var result string
+	str := hex.EncodeToString(b.data)
+	for i:=0; i<len(str); i++ {
+		if i%2==0 {
+			result += " "
+		}
+		result += string(str[i])
+	}
+	return result
 }
