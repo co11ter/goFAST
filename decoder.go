@@ -39,7 +39,7 @@ func (d *Decoder) Decode(segment []byte, msg interface{}) {
 	d.log("data: ")
 
 	d.log("pmap parsing: ")
-	d.parsePmap()
+	d.decodePmap()
 	d.log("  pmap parsed: ", *d.current)
 
 	var templateID uint
@@ -54,43 +54,45 @@ func (d *Decoder) Decode(segment []byte, msg interface{}) {
 		return
 	}
 
-	d.parseFields(tpl, msg)
+	m := newMsg(msg)
+	d.decodeSegment(tpl.Instructions, m)
 
 	return
 }
 
-func (d *Decoder) parseFields(tpl *Template, msg interface{}) {
-	m := newMsg(msg)
+func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
+	d.log("sequence start: ")
 
-	for _, instruction := range tpl.Instructions {
+	length := int(d.visit(instructions[0]).Value.(uint32))
+	d.log("  length: ", length)
+
+	if length > 0 {
+		tmp := *d.current
+		d.current = newPmap(d.buf)
+		d.prev = &tmp
+		d.log("  pmap: ", *d.current)
+	}
+
+	for i:=0; i<length; i++ {
+		for _, internal := range instructions[1:] {
+
+			d.log("  parsing: ", internal.Name)
+			field := d.visit(internal)
+			d.log("    parsed: ", field.Name, field.Value)
+			msg.AssignSlice(field, i)
+		}
+	}
+}
+
+func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
+	for _, instruction := range instructions {
 		if instruction.Type == TypeSequence {
-
-			d.log("sequence start: ")
-
-			length := int(d.visit(instruction.Instructions[0]).Value.(uint32))
-			d.log("  length: ", length)
-
-			if length > 0 {
-				tmp := *d.current
-				d.current = newPmap(d.buf)
-				d.prev = &tmp
-				d.log("  pmap: ", *d.current)
-			}
-
-			for i:=0; i<length; i++ {
-				for _, internal := range instruction.Instructions[1:] {
-
-					d.log("  parsing: ", internal.Name)
-					field := d.visit(internal)
-					d.log("    parsed: ", field.Name, field.Value)
-					m.AssignSlice(field, i)
-				}
-			}
+			d.decodeSequence(instruction.Instructions, msg)
 		} else {
 			d.log("parsing: ", instruction.Name)
 			field := d.visit(instruction)
 			d.log("  parsed: ", field.Name, field.Value)
-			m.Assign(field)
+			msg.Assign(field)
 		}
 	}
 }
@@ -135,7 +137,7 @@ func (d *Decoder) visit(instruction *Instruction) *Field {
 	return &Field{ID: instruction.ID, Name: instruction.Name, Value: nil}
 }
 
-func (d *Decoder) parsePmap() {
+func (d *Decoder) decodePmap() {
 	d.current = newPmap(d.buf)
 }
 
