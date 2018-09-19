@@ -8,12 +8,6 @@ import (
 
 const structTag = "fast"
 
-type Field struct {
-	ID uint // instruction id
-	Name string
-	Value interface{}
-}
-
 type message struct {
 	tagMap map[string][]int
 	msg    interface{}
@@ -36,8 +30,11 @@ func newMsg(msg interface{}) *message {
 }
 
 func (m *message) Assign(field *Field) {
-	path := m.lookUpPath(field)
+	if field.Value == nil {
+		return
+	}
 
+	path := m.lookUpPath(field)
 	if len(path) == 0 {
 		return
 	}
@@ -46,8 +43,11 @@ func (m *message) Assign(field *Field) {
 }
 
 func (m *message) AssignSlice(field *Field, index int) {
-	path := m.lookUpPath(field)
+	if field.Value == nil {
+		return
+	}
 
+	path := m.lookUpPath(field)
 	if len(path) < 2 {
 		return
 	}

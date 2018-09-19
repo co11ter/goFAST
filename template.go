@@ -222,7 +222,7 @@ func (p *xmlParser) parseOption(token *xml.StartElement, typ InstructionType) (o
 }
 
 func newInstruction(token *xml.StartElement) (*Instruction, error) {
-	instruction := &Instruction{}
+	instruction := &Instruction{Opt: OptNone}
 
 	switch token.Name.Local {
 	case tagString:

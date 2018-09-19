@@ -13,16 +13,13 @@ const (
 
 type Decoder struct {
 	repo map[uint]*Template
-
-	buf *buffer
-	current *pmap
-	prev *pmap
+	visitor *Visitor
 
 	debug string
 }
 
 func NewDecoder(tmps ...*Template) *Decoder {
-	decoder := &Decoder{repo: make(map[uint]*Template)}
+	decoder := &Decoder{repo: make(map[uint]*Template), visitor: newVisitor()}
 	for _, t := range tmps {
 		decoder.repo[t.ID] = t
 	}
@@ -34,20 +31,16 @@ func (d *Decoder) Debug(typ string) {
 }
 
 func (d *Decoder) Decode(segment []byte, msg interface{}) {
-	d.buf = newBuffer(segment)
+	d.visitor.buf = newBuffer(segment)
 
 	d.log("data: ")
 
 	d.log("pmap parsing: ")
-	d.decodePmap()
-	d.log("  pmap parsed: ", *d.current)
+	d.visitor.visitPmap()
+	d.log("  pmap parsed: ", *d.visitor.current)
 
-	var templateID uint
-
-	if d.current.isNextBitSet() {
-		templateID = uint(d.buf.decodeUint32(false))
-		d.log("template: ", templateID)
-	}
+	templateID := d.visitor.visitTemplateID()
+	d.log("template: ", templateID)
 
 	tpl, ok := d.repo[uint(templateID)]
 	if !ok {
@@ -63,21 +56,19 @@ func (d *Decoder) Decode(segment []byte, msg interface{}) {
 func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 	d.log("sequence start: ")
 
-	length := int(d.visit(instructions[0]).Value.(uint32))
+	length := int(d.visitor.visit(instructions[0]).Value.(uint32))
 	d.log("  length: ", length)
 
 	if length > 0 {
-		tmp := *d.current
-		d.current = newPmap(d.buf)
-		d.prev = &tmp
-		d.log("  pmap: ", *d.current)
+		d.visitor.visitPmap()
+		d.log("  pmap: ", *d.visitor.current)
 	}
 
 	for i:=0; i<length; i++ {
-		for _, internal := range instructions[1:] {
+		for _, instruction := range instructions[1:] {
 
-			d.log("  parsing: ", internal.Name)
-			field := d.visit(internal)
+			d.log("  parsing: ", instruction.Name)
+			field := d.visitor.visit(instruction)
 			d.log("    parsed: ", field.Name, field.Value)
 			msg.AssignSlice(field, i)
 		}
@@ -90,55 +81,11 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 			d.decodeSequence(instruction.Instructions, msg)
 		} else {
 			d.log("parsing: ", instruction.Name)
-			field := d.visit(instruction)
+			field := d.visitor.visit(instruction)
 			d.log("  parsed: ", field.Name, field.Value)
 			msg.Assign(field)
 		}
 	}
-}
-
-func (d *Decoder) visit(instruction *Instruction) *Field {
-	if instruction.Opt == OptConstant {
-		return &Field{
-			ID: instruction.ID,
-			Name: instruction.Name,
-			Value: instruction.Value,
-		}
-	}
-
-	if instruction.Type == TypeLength {
-		return &Field{
-			ID: instruction.ID,
-			Name: instruction.Name,
-			Value: d.buf.decodeUint32(instruction.IsOptional()),
-		}
-	}
-
-	if instruction.Type == TypeUint32 {
-		return &Field{
-			ID: instruction.ID,
-			Name: instruction.Name,
-			Value: d.buf.decodeUint32(instruction.IsOptional()),
-		}
-	}
-
-	if instruction.Type == TypeUint64 {
-		return &Field{
-			ID: instruction.ID,
-			Name: instruction.Name,
-			Value: d.buf.decodeUint64(instruction.IsOptional()),
-		}
-	}
-
-	if instruction.Type == TypeString {
-		d.buf.data = d.buf.data[1:] // TODO
-	}
-
-	return &Field{ID: instruction.ID, Name: instruction.Name, Value: nil}
-}
-
-func (d *Decoder) decodePmap() {
-	d.current = newPmap(d.buf)
 }
 
 func (d *Decoder) log(label string, param ...interface{}) {
@@ -146,10 +93,10 @@ func (d *Decoder) log(label string, param ...interface{}) {
 		return
 	}
 	if d.debug == DebugHex {
-		param = append([]interface{}{label, d.buf.Hex()}, param...)
+		param = append([]interface{}{label, d.visitor.buf.Hex()}, param...)
 		fmt.Println(param...)
 	} else {
-		param = append([]interface{}{label, d.buf.Int()}, param...)
+		param = append([]interface{}{label, d.visitor.buf.Int()}, param...)
 		fmt.Println(param...)
 	}
 }
