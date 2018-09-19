@@ -45,15 +45,17 @@ const (
 	TypeUint64
 	TypeInt64
 	TypeString
-	TypeDecimal
 	TypeSequence
+	TypeDecimal
 	TypeLength
 
-	OptDefault InstructionOpt = iota
+	OptNone InstructionOpt = iota
 	OptConstant
-	OptIncrement
-	OptCopy
 	OptDelta
+	OptDefault
+	OptCopy
+	OptIncrement
+	OptTail
 
 	PresenceMandatory InstructionPresence = iota
 	PresenceOptional
@@ -67,6 +69,22 @@ type Instruction struct {
 	Opt InstructionOpt
 	Instructions []*Instruction
 	Value interface{}
+}
+
+func (i *Instruction) IsOptional() bool {
+	return i.Presence == PresenceOptional
+}
+
+func (i *Instruction) IsNullable() bool {
+	return i.IsOptional() && (i.Opt != OptConstant)
+}
+
+func (i *Instruction) IsArray() bool {
+	return i.Type == TypeString || i.Type == TypeSequence
+}
+
+func (i *Instruction) HasPmapBit() bool {
+	return i.Opt > OptDelta || ((i.Opt == OptConstant) && i.Presence == PresenceOptional)
 }
 
 type Template struct {

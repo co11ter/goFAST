@@ -108,7 +108,7 @@ func (d *Decoder) visit(instruction *Instruction) *Field {
 		return &Field{
 			ID: instruction.ID,
 			Name: instruction.Name,
-			Value: d.buf.decodeUint32(instruction.Presence == PresenceOptional),
+			Value: d.buf.decodeUint32(instruction.IsOptional()),
 		}
 	}
 
@@ -116,7 +116,7 @@ func (d *Decoder) visit(instruction *Instruction) *Field {
 		return &Field{
 			ID: instruction.ID,
 			Name: instruction.Name,
-			Value: d.buf.decodeUint32(instruction.Presence == PresenceOptional),
+			Value: d.buf.decodeUint32(instruction.IsOptional()),
 		}
 	}
 
@@ -124,7 +124,7 @@ func (d *Decoder) visit(instruction *Instruction) *Field {
 		return &Field{
 			ID: instruction.ID,
 			Name: instruction.Name,
-			Value: d.buf.decodeUint64(instruction.Presence == PresenceOptional),
+			Value: d.buf.decodeUint64(instruction.IsOptional()),
 		}
 	}
 
