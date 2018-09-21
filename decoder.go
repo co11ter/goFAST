@@ -2,6 +2,7 @@ package fast
 
 import (
 	"fmt"
+	"io"
 )
 
 const (
@@ -18,8 +19,11 @@ type Decoder struct {
 	debug string
 }
 
-func NewDecoder(tmps ...*Template) *Decoder {
-	decoder := &Decoder{repo: make(map[uint]*Template), visitor: newVisitor()}
+func NewDecoder(reader io.ByteReader, tmps ...*Template) *Decoder {
+	decoder := &Decoder{
+		repo: make(map[uint]*Template),
+		visitor: newVisitor(NewReader(reader)),
+	}
 	for _, t := range tmps {
 		decoder.repo[t.ID] = t
 	}
@@ -30,13 +34,11 @@ func (d *Decoder) Debug(typ string) {
 	d.debug = typ
 }
 
-func (d *Decoder) Decode(segment []byte, msg interface{}) {
-	d.visitor.buf = newBuffer(segment)
-
+func (d *Decoder) Decode(msg interface{}) {
 	d.log("data: ")
 
 	d.log("pmap parsing: ")
-	d.visitor.visitPmap()
+	d.visitor.visitPMap()
 	d.log("  pmap parsed: ", *d.visitor.current)
 
 	templateID := d.visitor.visitTemplateID()
@@ -60,7 +62,7 @@ func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 	d.log("  length: ", length)
 
 	if length > 0 {
-		d.visitor.visitPmap()
+		d.visitor.visitPMap()
 		d.log("  pmap: ", *d.visitor.current)
 	}
 
@@ -93,10 +95,10 @@ func (d *Decoder) log(label string, param ...interface{}) {
 		return
 	}
 	if d.debug == DebugHex {
-		param = append([]interface{}{label, d.visitor.buf.Hex()}, param...)
+		param = append([]interface{}{label/*, d.visitor.buf.Hex()*/}, param...)
 		fmt.Println(param...)
 	} else {
-		param = append([]interface{}{label, d.visitor.buf.Int()}, param...)
+		param = append([]interface{}{label/*, d.visitor.buf.Int()*/}, param...)
 		fmt.Println(param...)
 	}
 }

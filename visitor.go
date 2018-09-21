@@ -7,30 +7,41 @@ type Field struct {
 }
 
 type Visitor struct {
-	prev *pmap
-	current *pmap
-	storage map[uint]interface{} // prev values
+	prev *PMap
+	current *PMap
+	storage map[uint]interface{} // TODO prev values
 
-	buf *buffer
+	reader *Reader
 }
 
-func newVisitor() *Visitor {
-	return &Visitor{storage: make(map[uint]interface{})}
+func newVisitor(reader *Reader) *Visitor {
+	return &Visitor{storage: make(map[uint]interface{}), reader: reader}
 }
 
-func (v *Visitor) visitPmap() {
+func (v *Visitor) visitPMap() {
+	var err error
 	if v.current == nil {
-		v.current = newPmap(v.buf)
+		v.current, err = v.reader.ReadPMap()
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		tmp := *v.current
-		v.current = newPmap(v.buf)
+		v.current, err = v.reader.ReadPMap()
+		if err != nil {
+			panic(err)
+		}
 		v.prev = &tmp
 	}
 }
 
 func (v *Visitor) visitTemplateID() uint {
-	if v.current.isNextBitSet() {
-		return uint(v.buf.decodeUint32(false))
+	if v.current.IsNextBitSet() {
+		tmp, _, err := v.reader.ReadUint32(false)
+		if err != nil {
+			panic(err)
+		}
+		return uint(tmp)
 	}
 	return 0
 }
@@ -47,7 +58,7 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 		v.storage[instruction.ID] = field.Value
 	case OptConstant:
 		if instruction.IsOptional() {
-			if v.current.isNextBitSet() {
+			if v.current.IsNextBitSet() {
 				field.Value = instruction.Value
 			}
 		} else {
@@ -55,7 +66,7 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 		}
 		v.storage[instruction.ID] = field.Value
 	case OptDefault:
-		if v.current.isNextBitSet() {
+		if v.current.IsNextBitSet() {
 			field.Value = v.decode(instruction)
 		} else{
 			field.Value = instruction.Value
@@ -78,14 +89,29 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 func (v *Visitor) decode(instruction *Instruction) interface{} {
 	switch instruction.Type {
 	case TypeLength:
-		return v.buf.decodeUint32(instruction.IsOptional())
+		tmp, _, err := v.reader.ReadUint32(instruction.IsNullable())
+		if err != nil {
+			panic(err)
+		}
+		return tmp
 	case TypeUint32:
-		return v.buf.decodeUint32(instruction.IsOptional())
+		tmp, _, err := v.reader.ReadUint32(instruction.IsNullable())
+		if err != nil {
+			panic(err)
+		}
+		return tmp
 	case TypeUint64:
-		return v.buf.decodeUint64(instruction.IsOptional())
+		tmp, _, err := v.reader.ReadUint64(instruction.IsNullable())
+		if err != nil {
+			panic(err)
+		}
+		return tmp
 	case TypeString:
-		v.buf.data = v.buf.data[1:] // TODO
-		return nil
+		tmp, _, err := v.reader.ReadAsciiString(instruction.IsNullable())
+		if err != nil {
+			panic(err)
+		}
+		return tmp
 	default:
 		return nil
 	}
