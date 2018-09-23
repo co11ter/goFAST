@@ -131,15 +131,17 @@ func (r *Reader) ReadAsciiString(nullable bool) (result string, ok bool, err err
 	}
 
 	for {
+		if (r.last & 0x80) > 0 {
+			r.buf.WriteByte(r.last & 0x7F)
+			break
+		}
+		r.buf.WriteByte(r.last)
 		r.last, err = r.reader.ReadByte()
 		if err != nil {
 			return
 		}
-		if (r.last & 0x80) == 0 {
-			break
-		}
-		r.buf.WriteByte(r.last)
 	}
+
 	result = r.buf.String()
 	r.buf.Reset()
 	return
