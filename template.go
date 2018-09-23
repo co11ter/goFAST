@@ -179,10 +179,8 @@ func (p *xmlParser) parseOption(token *xml.StartElement, typ InstructionType) (o
 	switch token.Name.Local {
 	case tagConstant:
 		opt = OptConstant
-		value = newValue(token, typ)
 	case tagDefault:
 		opt = OptDefault
-		value = newValue(token, typ)
 	case tagCopy:
 		opt = OptCopy
 	case tagDelta:
@@ -190,6 +188,8 @@ func (p *xmlParser) parseOption(token *xml.StartElement, typ InstructionType) (o
 	case tagIncrement:
 		opt = OptIncrement
 	}
+
+	value = newValue(token, typ)
 
 	for {
 		token, err := p.decoder.Token()

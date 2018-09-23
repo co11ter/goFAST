@@ -1,6 +1,8 @@
 package fast
 
-import "io"
+import (
+	"io"
+)
 
 type Field struct {
 	ID uint // instruction id
@@ -21,6 +23,17 @@ func newVisitor(reader io.ByteReader) *Visitor {
 		storage: make(map[uint]interface{}),
 		reader: NewReader(reader),
 	}
+}
+
+func (v *Visitor) save(id uint, value interface{}) {
+	v.storage[id] = &value
+}
+
+func (v *Visitor) load(id uint) interface{} {
+	if value, ok := v.storage[id]; ok {
+		return value
+	}
+	return nil
 }
 
 func (v *Visitor) visitPMap() {
@@ -60,7 +73,7 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 	switch instruction.Opt {
 	case OptNone:
 		field.Value = v.decode(instruction)
-		v.storage[instruction.ID] = field.Value
+		v.save(instruction.ID, field.Value)
 	case OptConstant:
 		if instruction.IsOptional() {
 			if v.current.IsNextBitSet() {
@@ -69,23 +82,35 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 		} else {
 			field.Value = instruction.Value
 		}
-		v.storage[instruction.ID] = field.Value
+		v.save(instruction.ID, field.Value)
 	case OptDefault:
 		if v.current.IsNextBitSet() {
 			field.Value = v.decode(instruction)
 		} else{
 			field.Value = instruction.Value
-			v.storage[instruction.ID] = field.Value
+			v.save(instruction.ID, field.Value)
 		}
 	case OptDelta:
 		// TODO
 	case OptTail:
 		// TODO
-	case OptCopy, OptIncrement: // TODO
-		/*if v.current.isNextBitSet() {
+	case OptCopy, OptIncrement:
+		if v.current.IsNextBitSet() {
 			field.Value = v.decode(instruction)
-			v.storage[instruction.ID] = field.Value
-		}*/
+			v.save(instruction.ID, field.Value)
+		} else {
+			if v.load(instruction.ID) == nil {
+				field.Value = instruction.Value
+				v.save(instruction.ID, field.Value)
+			} else {
+				// TODO what have to do on empty value
+
+				field.Value = v.load(instruction.ID)
+			}
+		}
+		if instruction.Opt == OptIncrement {
+			increment(field.Value)
+		}
 	}
 
 	return field
@@ -120,4 +145,18 @@ func (v *Visitor) decode(instruction *Instruction) interface{} {
 	default:
 		return nil
 	}
+}
+
+func increment(value interface{}) (res interface{}) {
+	switch value.(type) {
+	case int64:
+		res = value.(int64)+1
+	case int32:
+		res = value.(int32)+1
+	case uint64:
+		res = value.(uint64)+1
+	case uint32:
+		res = value.(uint32)+1
+	}
+	return
 }
