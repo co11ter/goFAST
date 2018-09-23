@@ -7,22 +7,19 @@ import (
 
 const (
 	maxLoadBytes = (32 << (^uint(0) >> 63)) * 8 / 7 // max size of 7-th bits data
-
-	DebugHex = "hex"
-	DebugInt = "int"
 )
 
 type Decoder struct {
 	repo map[uint]*Template
 	visitor *Visitor
 
-	debug string
+	writer io.Writer
 }
 
 func NewDecoder(reader io.ByteReader, tmps ...*Template) *Decoder {
 	decoder := &Decoder{
 		repo: make(map[uint]*Template),
-		visitor: newVisitor(NewReader(reader)),
+		visitor: newVisitor(reader),
 	}
 	for _, t := range tmps {
 		decoder.repo[t.ID] = t
@@ -30,48 +27,49 @@ func NewDecoder(reader io.ByteReader, tmps ...*Template) *Decoder {
 	return decoder
 }
 
-func (d *Decoder) Debug(typ string) {
-	d.debug = typ
+func (d *Decoder) SetLog(writer io.Writer) {
+	d.writer = writer
 }
 
-func (d *Decoder) Decode(msg interface{}) {
-	d.log("data: ")
-
+func (d *Decoder) Decode(msg interface{}) error {
+	d.log("// ----- new message start ----- //\n")
 	d.log("pmap parsing: ")
 	d.visitor.visitPMap()
-	d.log("  pmap parsed: ", *d.visitor.current)
+	d.log("\n  pmap = ", *d.visitor.current, "\n")
 
+	d.log("template parsing: ")
 	templateID := d.visitor.visitTemplateID()
-	d.log("template: ", templateID)
+	d.log("\n  template = ", templateID, "\n")
 
 	tpl, ok := d.repo[uint(templateID)]
 	if !ok {
-		return
+		return nil
 	}
 
 	m := newMsg(msg)
 	d.decodeSegment(tpl.Instructions, m)
 
-	return
+	return nil
 }
 
 func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 	d.log("sequence start: ")
 
 	length := int(d.visitor.visit(instructions[0]).Value.(uint32))
-	d.log("  length: ", length)
+	d.log("\n  length = ", length, "\n")
 
 	if length > 0 {
+		d.log("pmap parsing: ")
 		d.visitor.visitPMap()
-		d.log("  pmap: ", *d.visitor.current)
+		d.log("\n  pmap = ", *d.visitor.current, "\n")
 	}
 
 	for i:=0; i<length; i++ {
 		for _, instruction := range instructions[1:] {
 
-			d.log("  parsing: ", instruction.Name)
+			d.log("  parsing: ", instruction.Name, " ")
 			field := d.visitor.visit(instruction)
-			d.log("    parsed: ", field.Name, field.Value)
+			d.log("\n    ", field.Name, " = ", field.Value, "\n")
 			msg.AssignSlice(field, i)
 		}
 	}
@@ -82,23 +80,18 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 		if instruction.Type == TypeSequence {
 			d.decodeSequence(instruction.Instructions, msg)
 		} else {
-			d.log("parsing: ", instruction.Name)
+			d.log("parsing: ", instruction.Name, " ")
 			field := d.visitor.visit(instruction)
-			d.log("  parsed: ", field.Name, field.Value)
+			d.log("\n  ", field.Name, " = ", field.Value, "\n")
 			msg.Assign(field)
 		}
 	}
 }
 
-func (d *Decoder) log(label string, param ...interface{}) {
-	if d.debug == "" {
+func (d *Decoder) log(param ...interface{}) {
+	if d.writer == nil {
 		return
 	}
-	if d.debug == DebugHex {
-		param = append([]interface{}{label/*, d.visitor.buf.Hex()*/}, param...)
-		fmt.Println(param...)
-	} else {
-		param = append([]interface{}{label/*, d.visitor.buf.Int()*/}, param...)
-		fmt.Println(param...)
-	}
+
+	d.writer.Write([]byte(fmt.Sprint(param...)))
 }

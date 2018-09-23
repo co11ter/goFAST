@@ -1,5 +1,7 @@
 package fast
 
+import "io"
+
 type Field struct {
 	ID uint // instruction id
 	Name string
@@ -14,8 +16,11 @@ type Visitor struct {
 	reader *Reader
 }
 
-func newVisitor(reader *Reader) *Visitor {
-	return &Visitor{storage: make(map[uint]interface{}), reader: reader}
+func newVisitor(reader io.ByteReader) *Visitor {
+	return &Visitor{
+		storage: make(map[uint]interface{}),
+		reader: NewReader(reader),
+	}
 }
 
 func (v *Visitor) visitPMap() {
