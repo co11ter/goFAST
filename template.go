@@ -17,6 +17,8 @@ const (
 	tagDecimal = "decimal"
 	tagSequence = "sequence"
 	tagLength = "length"
+	tagExponent = "exponent"
+	tagMantissa = "mantissa"
 
 	tagIncrement = "increment"
 	tagConstant = "constant"
@@ -48,6 +50,8 @@ const (
 	TypeSequence
 	TypeDecimal
 	TypeLength
+	TypeExponent
+	TypeMantissa
 
 	OptNone InstructionOpt = iota
 	OptConstant
@@ -77,10 +81,6 @@ func (i *Instruction) IsOptional() bool {
 
 func (i *Instruction) IsNullable() bool {
 	return i.IsOptional() && (i.Opt != OptConstant)
-}
-
-func (i *Instruction) IsArray() bool {
-	return i.Type == TypeString || i.Type == TypeSequence
 }
 
 func (i *Instruction) HasPmapBit() bool {
@@ -161,9 +161,11 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
 			if instruction.Type == TypeSequence {
 				inner := p.parseInstruction(&start)
 				instruction.Instructions = append(instruction.Instructions, inner)
-
+			} else if instruction.Type == TypeDecimal {
+				inner := p.parseInstruction(&start)
+				instruction.Instructions = append(instruction.Instructions, inner)
 			} else {
-				instruction.Opt, instruction.Value = p.parseOption(&start, instruction.Type)
+				instruction.Opt, instruction.Value = p.parseOperation(&start, instruction.Type)
 			}
 		}
 
@@ -175,7 +177,7 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
 	return instruction
 }
 
-func (p *xmlParser) parseOption(token *xml.StartElement, typ InstructionType) (opt InstructionOpt, value interface{}) {
+func (p *xmlParser) parseOperation(token *xml.StartElement, typ InstructionType) (opt InstructionOpt, value interface{}) {
 	switch token.Name.Local {
 	case tagConstant:
 		opt = OptConstant
@@ -225,6 +227,10 @@ func newInstruction(token *xml.StartElement) *Instruction {
 		instruction.Type = TypeSequence
 	case tagLength:
 		instruction.Type = TypeLength
+	case tagExponent:
+		instruction.Type = TypeExponent
+	case tagMantissa:
+		instruction.Type = TypeMantissa
 	}
 
 	for _, attr := range token.Attr {
@@ -287,13 +293,13 @@ func newValue(token *xml.StartElement, typ InstructionType) interface{} {
 					panic(err)
 				}
 				return uint32(value)
-			case TypeInt64:
+			case TypeInt64, TypeMantissa:
 				value, err := strconv.ParseInt(attr.Value, 10, 64)
 				if err != nil {
 					panic(err)
 				}
 				return value
-			case TypeInt32:
+			case TypeInt32, TypeExponent:
 				value, err := strconv.ParseInt(attr.Value, 10, 32)
 				if err != nil {
 					panic(err)
