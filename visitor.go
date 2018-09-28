@@ -64,6 +64,23 @@ func (v *Visitor) visitTemplateID() uint {
 	return 0
 }
 
+func (v *Visitor) visitDecimal(instruction *Instruction, field *Field) {
+	for _, in := range instruction.Instructions {
+		if in.Type == TypeMantissa {
+			_, _, err := v.reader.ReadInt64(in.IsNullable())
+			if err != nil {
+				panic(err)
+			}
+		}
+		if in.Type == TypeExponent {
+			_, _, err := v.reader.ReadInt32(in.IsNullable())
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+}
+
 func (v *Visitor) visit(instruction *Instruction) *Field {
 	field := &Field{
 		ID: instruction.ID,

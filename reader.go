@@ -50,6 +50,16 @@ func (r *Reader) ReadPMap() (m *PMap, err error) {
 	return
 }
 
+// TODO
+func (r *Reader) ReadInt32(nullable bool) (result int32, ok bool, err error) {
+	return
+}
+
+// TODO
+func (r *Reader) ReadInt64(nullable bool) (result int64, ok bool, err error) {
+	return
+}
+
 func (r *Reader) ReadUint32(nullable bool) (result uint32, ok bool, err error) {
 	r.last, err = r.reader.ReadByte()
 	if err != nil {
@@ -146,22 +156,3 @@ func (r *Reader) ReadAsciiString(nullable bool) (result string, ok bool, err err
 	r.buf.Reset()
 	return
 }
-
-//func (r *Reader) Int() (res []int8) {
-//	for _, x := range b.data {
-//		res = append(res, int8(x))
-//	}
-//	return
-//}
-//
-//func (r *Reader) Hex() string {
-//	var result string
-//	str := hex.EncodeToString(b.data)
-//	for i:=0; i<len(str); i++ {
-//		if i%2==0 {
-//			result += " "
-//		}
-//		result += string(str[i])
-//	}
-//	return result
-//}
