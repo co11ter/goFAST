@@ -2,6 +2,7 @@ package fast
 
 import (
 	"io"
+	"math/big"
 )
 
 type Field struct {
@@ -64,22 +65,25 @@ func (v *Visitor) visitTemplateID() uint {
 	return 0
 }
 
-// TODO
+// TODO need refactor
 func (v *Visitor) visitDecimal(instruction *Instruction, field *Field) {
+	var mantissa int64
+	var exponent int32
 	for _, in := range instruction.Instructions {
 		if in.Type == TypeMantissa {
-			_, _, err := v.reader.ReadInt64(in.IsNullable())
-			if err != nil {
-				panic(err)
-			}
+			mField := v.visit(in)
+			mantissa = mField.Value.(int64)
 		}
 		if in.Type == TypeExponent {
-			_, _, err := v.reader.ReadInt32(in.IsNullable())
-			if err != nil {
-				panic(err)
-			}
+			eField := v.visit(in)
+			exponent = eField.Value.(int32)
 		}
 	}
+
+	field.Value, _ = (&big.Float{}).SetMantExp(
+		(&big.Float{}).SetInt64(mantissa),
+		int(exponent),
+	).Float64()
 }
 
 func (v *Visitor) visit(instruction *Instruction) *Field {
@@ -162,6 +166,18 @@ func (v *Visitor) decode(instruction *Instruction) interface{} {
 		return tmp
 	case TypeString:
 		tmp, _, err := v.reader.ReadAsciiString(instruction.IsNullable())
+		if err != nil {
+			panic(err)
+		}
+		return tmp
+	case TypeInt64, TypeMantissa:
+		tmp, _, err := v.reader.ReadInt64(instruction.IsNullable())
+		if err != nil {
+			panic(err)
+		}
+		return tmp
+	case TypeInt32, TypeExponent:
+		tmp, _, err := v.reader.ReadInt32(instruction.IsNullable())
 		if err != nil {
 			panic(err)
 		}
