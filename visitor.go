@@ -3,35 +3,41 @@ package fast
 import (
 	"io"
 	"math/big"
+	"strconv"
 )
 
 type Field struct {
 	ID uint // instruction id
 	Name string
+	Type InstructionType
 	Value interface{}
+}
+
+func (f *Field) key() string {
+	return strconv.Itoa(int(f.ID)) + ":" + f.Name + ":" + strconv.Itoa(int(f.Type))
 }
 
 type Visitor struct {
 	prev *PMap
 	current *PMap
-	storage map[uint]interface{} // TODO prev values
+	storage map[string]interface{} // TODO prev values
 
 	reader *Reader
 }
 
 func newVisitor(reader io.ByteReader) *Visitor {
 	return &Visitor{
-		storage: make(map[uint]interface{}),
+		storage: make(map[string]interface{}),
 		reader: NewReader(reader),
 	}
 }
 
-func (v *Visitor) save(id uint, value interface{}) {
-	v.storage[id] = &value
+func (v *Visitor) save(key string, value interface{}) {
+	v.storage[key] = &value
 }
 
-func (v *Visitor) load(id uint) interface{} {
-	if value, ok := v.storage[id]; ok {
+func (v *Visitor) load(key string) interface{} {
+	if value, ok := v.storage[key]; ok {
 		return value
 	}
 	return nil
@@ -90,6 +96,7 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 	field := &Field{
 		ID: instruction.ID,
 		Name: instruction.Name,
+		Type: instruction.Type,
 	}
 
 	// TODO
@@ -101,7 +108,7 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 	switch instruction.Opt {
 	case OptNone:
 		field.Value = v.decode(instruction)
-		v.save(instruction.ID, field.Value)
+		v.save(field.key(), field.Value)
 	case OptConstant:
 		if instruction.IsOptional() {
 			if v.current.IsNextBitSet() {
@@ -110,30 +117,33 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 		} else {
 			field.Value = instruction.Value
 		}
-		v.save(instruction.ID, field.Value)
+		v.save(field.key(), field.Value)
 	case OptDefault:
 		if v.current.IsNextBitSet() {
 			field.Value = v.decode(instruction)
 		} else{
 			field.Value = instruction.Value
-			v.save(instruction.ID, field.Value)
+			v.save(field.key(), field.Value)
 		}
 	case OptDelta:
-		// TODO
+		field.Value = v.decode(instruction)
+		if previous := v.load(field.key()); previous != nil {
+			field.Value = sum(field.Value, previous)
+		}
 	case OptTail:
 		// TODO
 	case OptCopy, OptIncrement:
 		if v.current.IsNextBitSet() {
 			field.Value = v.decode(instruction)
-			v.save(instruction.ID, field.Value)
+			v.save(field.key(), field.Value)
 		} else {
-			if v.load(instruction.ID) == nil {
+			if v.load(field.key()) == nil {
 				field.Value = instruction.Value
-				v.save(instruction.ID, field.Value)
+				v.save(field.key(), field.Value)
 			} else {
 				// TODO what have to do on empty value
 
-				field.Value = v.load(instruction.ID)
+				field.Value = v.load(field.key())
 			}
 		}
 		if instruction.Opt == OptIncrement {
@@ -187,16 +197,35 @@ func (v *Visitor) decode(instruction *Instruction) interface{} {
 	}
 }
 
-func increment(value interface{}) (res interface{}) {
-	switch value.(type) {
+// TODO need implements for string
+func sum(values ...interface{}) (res interface{}) {
+	switch values[0].(type) {
 	case int64:
-		res = value.(int64)+1
+		res = values[0].(int64)+int64(toInt(values[1]))
 	case int32:
-		res = value.(int32)+1
+		res = values[0].(int32)+int32(toInt(values[1]))
 	case uint64:
-		res = value.(uint64)+1
+		res = values[0].(uint64)+uint64(toInt(values[1]))
 	case uint32:
-		res = value.(uint32)+1
+		res = values[0].(uint32)+uint32(toInt(values[1]))
 	}
 	return
+}
+
+func toInt(value interface{}) int {
+	switch value.(type) {
+	case int64:
+		return int(value.(int64))
+	case int32:
+		return int(value.(int32))
+	case uint64:
+		return int(value.(uint64))
+	case uint32:
+		return int(value.(uint32))
+	}
+	return 0
+}
+
+func increment(value interface{}) (res interface{}) {
+	return sum(value, 1)
 }
