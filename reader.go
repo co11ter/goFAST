@@ -50,13 +50,65 @@ func (r *Reader) ReadPMap() (m *PMap, err error) {
 	return
 }
 
-// TODO
 func (r *Reader) ReadInt32(nullable bool) (result int32, ok bool, err error) {
+	r.last, err = r.reader.ReadByte()
+	if err != nil {
+		return
+	}
+
+	var decrement int32 = 1
+
+	if (r.last & 0x40) > 0 {
+		result = int32((-1 ^ int8(0x7F)) | int8((r.last & 0x7F)))
+		decrement = 0
+	} else {
+		result = int32(r.last & 0x3F)
+	}
+
+	for (r.last & 0x80) == 0 {
+		result <<= 7;
+		r.last, err = r.reader.ReadByte()
+		if err != nil {
+			return
+		}
+		result |= int32(r.last & 0x7F);
+	}
+
+	if nullable {
+		result -= decrement
+	}
+
 	return
 }
 
-// TODO
 func (r *Reader) ReadInt64(nullable bool) (result int64, ok bool, err error) {
+	r.last, err = r.reader.ReadByte()
+	if err != nil {
+		return
+	}
+
+	var decrement int64 = 1
+
+	if (r.last & 0x40) > 0 {
+		result = int64((-1 ^ int8(0x7F)) | int8((r.last & 0x7F)))
+		decrement = 0
+	} else {
+		result = int64(r.last & 0x3F)
+	}
+
+	for (r.last & 0x80) == 0 {
+		result <<= 7;
+		r.last, err = r.reader.ReadByte()
+		if err != nil {
+			return
+		}
+		result |= int64(r.last & 0x7F);
+	}
+
+	if nullable {
+		result -= decrement
+	}
+
 	return
 }
 

@@ -64,6 +64,7 @@ func (v *Visitor) visitTemplateID() uint {
 	return 0
 }
 
+// TODO
 func (v *Visitor) visitDecimal(instruction *Instruction, field *Field) {
 	for _, in := range instruction.Instructions {
 		if in.Type == TypeMantissa {
@@ -85,6 +86,12 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 	field := &Field{
 		ID: instruction.ID,
 		Name: instruction.Name,
+	}
+
+	// TODO
+	if instruction.Type == TypeDecimal {
+		v.visitDecimal(instruction, field)
+		return field
 	}
 
 	switch instruction.Opt {
