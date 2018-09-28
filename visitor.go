@@ -156,13 +156,7 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 
 func (v *Visitor) decode(instruction *Instruction) interface{} {
 	switch instruction.Type {
-	case TypeLength:
-		tmp, _, err := v.reader.ReadUint32(instruction.IsNullable())
-		if err != nil {
-			panic(err)
-		}
-		return tmp
-	case TypeUint32:
+	case TypeUint32, TypeLength:
 		tmp, _, err := v.reader.ReadUint32(instruction.IsNullable())
 		if err != nil {
 			panic(err)
