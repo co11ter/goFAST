@@ -163,6 +163,12 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
 				instruction.Instructions = append(instruction.Instructions, inner)
 			} else if instruction.Type == TypeDecimal {
 				inner := p.parseInstruction(&start)
+
+				// If the decimal has optional presence, the exponent field is treated as on optional
+				//  integer field and the mantissa field is treated as a mandatory integer field.
+				if inner.Type == TypeExponent && instruction.Presence == PresenceOptional {
+					inner.Presence = instruction.Presence
+				}
 				instruction.Instructions = append(instruction.Instructions, inner)
 			} else {
 				instruction.Opt, instruction.Value = p.parseOperation(&start, instruction.Type)
