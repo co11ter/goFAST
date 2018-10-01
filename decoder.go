@@ -58,13 +58,11 @@ func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 	length := int(d.visitor.visit(instructions[0]).Value.(uint32))
 	d.log("\n  length = ", length, "\n")
 
-	if length > 0 {
+	for i:=0; i<length; i++ {
+		d.log("sequence elem[", i, "] start: \n")
 		d.log("pmap parsing: ")
 		d.visitor.visitPMap()
 		d.log("\n  pmap = ", *d.visitor.current, "\n")
-	}
-
-	for i:=0; i<length; i++ {
 		for _, instruction := range instructions[1:] {
 
 			d.log("  parsing: ", instruction.Name, " ")

@@ -33,7 +33,7 @@ func newVisitor(reader io.ByteReader) *Visitor {
 }
 
 func (v *Visitor) save(key string, value interface{}) {
-	v.storage[key] = &value
+	v.storage[key] = value
 }
 
 func (v *Visitor) load(key string) interface{} {
@@ -144,10 +144,11 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 				// TODO what have to do on empty value
 
 				field.Value = v.load(field.key())
+				if instruction.Opt == OptIncrement {
+					field.Value = increment(field.Value)
+					v.save(field.key(), field.Value)
+				}
 			}
-		}
-		if instruction.Opt == OptIncrement {
-			increment(field.Value)
 		}
 	}
 
@@ -216,6 +217,10 @@ func toInt(value interface{}) int {
 		return int(value.(uint64))
 	case uint32:
 		return int(value.(uint32))
+	case int:
+		return value.(int)
+	case uint:
+		return int(value.(uint))
 	}
 	return 0
 }
