@@ -130,6 +130,7 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 		if previous := v.load(field.key()); previous != nil {
 			field.Value = sum(field.Value, previous)
 		}
+		v.save(field.key(), field.Value)
 	case OptTail:
 		// TODO
 	case OptCopy, OptIncrement:
