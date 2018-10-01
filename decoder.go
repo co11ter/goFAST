@@ -13,7 +13,7 @@ type Decoder struct {
 	repo map[uint]*Template
 	visitor *Visitor
 
-	writer io.Writer
+	logWriter io.Writer
 }
 
 func NewDecoder(reader io.ByteReader, tmps ...*Template) *Decoder {
@@ -28,7 +28,7 @@ func NewDecoder(reader io.ByteReader, tmps ...*Template) *Decoder {
 }
 
 func (d *Decoder) SetLog(writer io.Writer) {
-	d.writer = writer
+	d.logWriter = writer
 }
 
 func (d *Decoder) Decode(msg interface{}) error {
@@ -87,9 +87,9 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 }
 
 func (d *Decoder) log(param ...interface{}) {
-	if d.writer == nil {
+	if d.logWriter == nil {
 		return
 	}
 
-	d.writer.Write([]byte(fmt.Sprint(param...)))
+	d.logWriter.Write([]byte(fmt.Sprint(param...)))
 }
