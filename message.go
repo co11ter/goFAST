@@ -39,7 +39,11 @@ func (m *message) Assign(field *Field) {
 		return
 	}
 
-	reflect.ValueOf(m.msg).Elem().Field(path[0]).Set(reflect.ValueOf(field.Value))
+	if rField := reflect.ValueOf(m.msg).Elem().Field(path[0]); rField.Kind() == reflect.Ptr {
+		rField.Elem().Set(reflect.ValueOf(field.Value))
+	} else {
+		rField.Set(reflect.ValueOf(field.Value))
+	}
 }
 
 func (m *message) AssignSlice(field *Field, index int) {
@@ -67,7 +71,11 @@ func (m *message) AssignSlice(field *Field, index int) {
 		value.SetLen(index + 1)
 	}
 
-	value.Index(index).Field(path[1]).Set(reflect.ValueOf(field.Value))
+	if rField := value.Index(index).Field(path[1]); rField.Kind() == reflect.Ptr {
+		rField.Elem().Set(reflect.ValueOf(field.Value))
+	} else {
+		rField.Set(reflect.ValueOf(field.Value))
+	}
 }
 
 func (m *message) lookUpPath(field *Field) []int {

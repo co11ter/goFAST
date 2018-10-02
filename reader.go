@@ -6,7 +6,6 @@ import (
 	"io"
 )
 
-// TODO ok - still don't use
 type Reader struct {
 	reader io.ByteReader
 	buf bytes.Buffer
@@ -50,12 +49,14 @@ func (r *Reader) ReadPMap() (m *PMap, err error) {
 	return
 }
 
-func (r *Reader) ReadInt32(nullable bool) (result int32, ok bool, err error) {
+func (r *Reader) ReadInt32(nullable bool) (*int32, error) {
+	var err error
 	r.last, err = r.reader.ReadByte()
 	if err != nil {
-		return
+		return nil, err
 	}
 
+	var result int32
 	var decrement int32 = 1
 
 	if (r.last & 0x40) > 0 {
@@ -69,7 +70,7 @@ func (r *Reader) ReadInt32(nullable bool) (result int32, ok bool, err error) {
 		result <<= 7;
 		r.last, err = r.reader.ReadByte()
 		if err != nil {
-			return
+			return nil, err
 		}
 		result |= int32(r.last & 0x7F);
 	}
@@ -78,15 +79,17 @@ func (r *Reader) ReadInt32(nullable bool) (result int32, ok bool, err error) {
 		result -= decrement
 	}
 
-	return
+	return &result, nil
 }
 
-func (r *Reader) ReadInt64(nullable bool) (result int64, ok bool, err error) {
+func (r *Reader) ReadInt64(nullable bool) (*int64, error) {
+	var err error
 	r.last, err = r.reader.ReadByte()
 	if err != nil {
-		return
+		return nil, err
 	}
 
+	var result int64
 	var decrement int64 = 1
 
 	if (r.last & 0x40) > 0 {
@@ -100,7 +103,7 @@ func (r *Reader) ReadInt64(nullable bool) (result int64, ok bool, err error) {
 		result <<= 7;
 		r.last, err = r.reader.ReadByte()
 		if err != nil {
-			return
+			return nil, err
 		}
 		result |= int64(r.last & 0x7F);
 	}
@@ -109,22 +112,23 @@ func (r *Reader) ReadInt64(nullable bool) (result int64, ok bool, err error) {
 		result -= decrement
 	}
 
-	return
+	return &result, nil
 }
 
-func (r *Reader) ReadUint32(nullable bool) (result uint32, ok bool, err error) {
+func (r *Reader) ReadUint32(nullable bool) (*uint32, error) {
+	var err error
 	r.last, err = r.reader.ReadByte()
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	result = uint32(r.last & 0x7F)
+	result := uint32(r.last & 0x7F)
 
 	for (r.last & 0x80) == 0 {
 		result <<= 7;
 		r.last, err = r.reader.ReadByte()
 		if err != nil {
-			return
+			return nil, err
 		}
 		result |= uint32(r.last & 0x7F);
 	}
@@ -133,22 +137,23 @@ func (r *Reader) ReadUint32(nullable bool) (result uint32, ok bool, err error) {
 		result--
 	}
 
-	return
+	return &result, nil
 }
 
-func (r *Reader) ReadUint64(nullable bool) (result uint64, ok bool, err error) {
+func (r *Reader) ReadUint64(nullable bool) (*uint64, error) {
+	var err error
 	r.last, err = r.reader.ReadByte()
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	result = uint64(r.last & 0x7F)
+	result := uint64(r.last & 0x7F)
 
 	for (r.last & 0x80) == 0 {
 		result <<= 7;
 		r.last, err = r.reader.ReadByte()
 		if err != nil {
-			return
+			return nil, err
 		}
 		result |= uint64(r.last & 0x7F);
 	}
@@ -157,39 +162,47 @@ func (r *Reader) ReadUint64(nullable bool) (result uint64, ok bool, err error) {
 		result--
 	}
 
-	return
+	return &result, nil
 }
 
-func (r *Reader) ReadAsciiString(nullable bool) (result string, ok bool, err error) {
+// TODO
+func (r *Reader) ReadUtfString(nullable bool) (*string, error) {
+	return nil, nil
+}
+
+func (r *Reader) ReadAsciiString(nullable bool) (*string, error) {
+	var err error
 	r.last, err = r.reader.ReadByte()
 	if err != nil {
-		return
+		return nil, err
 	}
+
+	var result string
 
 	if (r.last & 0x7F) == 0 {
 		if r.last == 0x80 {
-			return
+			return &result, nil
 		}
 
 		r.last, err = r.reader.ReadByte()
 		if err != nil {
-			return
+			return nil, err
 		}
 
 		if r.last == 0x80 {
-			return
+			return &result, nil
 		} else if nullable && r.last == 0x00 {
 			r.last, err = r.reader.ReadByte()
 			if err != nil {
-				return
+				return nil, err
 			}
 
 			if r.last == 0x80 {
-				return
+				return &result, nil
 			}
 		}
 		err = errors.New("d9")
-		return
+		return nil, err
 	}
 
 	for {
@@ -200,11 +213,11 @@ func (r *Reader) ReadAsciiString(nullable bool) (result string, ok bool, err err
 		r.buf.WriteByte(r.last)
 		r.last, err = r.reader.ReadByte()
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 
 	result = r.buf.String()
 	r.buf.Reset()
-	return
+	return &result, nil
 }

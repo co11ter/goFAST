@@ -3,44 +3,21 @@ package fast
 import (
 	"io"
 	"math/big"
-	"strconv"
 )
-
-type Field struct {
-	ID uint // instruction id
-	Name string
-	Type InstructionType
-	Value interface{}
-}
-
-func (f *Field) key() string {
-	return strconv.Itoa(int(f.ID)) + ":" + f.Name + ":" + strconv.Itoa(int(f.Type))
-}
 
 type Visitor struct {
 	prev *PMap
 	current *PMap
-	storage map[string]interface{} // TODO prev values
+	storage storage
 
 	reader *Reader
 }
 
 func newVisitor(reader io.ByteReader) *Visitor {
 	return &Visitor{
-		storage: make(map[string]interface{}),
+		storage: newStorage(),
 		reader: NewReader(reader),
 	}
-}
-
-func (v *Visitor) save(key string, value interface{}) {
-	v.storage[key] = value
-}
-
-func (v *Visitor) load(key string) interface{} {
-	if value, ok := v.storage[key]; ok {
-		return value
-	}
-	return nil
 }
 
 func (v *Visitor) visitPMap() {
@@ -62,11 +39,11 @@ func (v *Visitor) visitPMap() {
 
 func (v *Visitor) visitTemplateID() uint {
 	if v.current.IsNextBitSet() {
-		tmp, _, err := v.reader.ReadUint32(false)
+		tmp, err := v.reader.ReadUint32(false)
 		if err != nil {
 			panic(err)
 		}
-		return uint(tmp)
+		return uint(*tmp)
 	}
 	return 0
 }
@@ -108,7 +85,7 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 	switch instruction.Opt {
 	case OptNone:
 		field.Value = v.decode(instruction)
-		v.save(field.key(), field.Value)
+		v.storage.save(field.key(), field.Value)
 	case OptConstant:
 		if instruction.IsOptional() {
 			if v.current.IsNextBitSet() {
@@ -117,37 +94,37 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 		} else {
 			field.Value = instruction.Value
 		}
-		v.save(field.key(), field.Value)
+		v.storage.save(field.key(), field.Value)
 	case OptDefault:
 		if v.current.IsNextBitSet() {
 			field.Value = v.decode(instruction)
 		} else{
 			field.Value = instruction.Value
-			v.save(field.key(), field.Value)
+			v.storage.save(field.key(), field.Value)
 		}
 	case OptDelta:
 		field.Value = v.decode(instruction)
-		if previous := v.load(field.key()); previous != nil {
+		if previous := v.storage.load(field.key()); previous != nil {
 			field.Value = sum(field.Value, previous)
 		}
-		v.save(field.key(), field.Value)
+		v.storage.save(field.key(), field.Value)
 	case OptTail:
 		// TODO
 	case OptCopy, OptIncrement:
 		if v.current.IsNextBitSet() {
 			field.Value = v.decode(instruction)
-			v.save(field.key(), field.Value)
+			v.storage.save(field.key(), field.Value)
 		} else {
-			if v.load(field.key()) == nil {
+			if v.storage.load(field.key()) == nil {
 				field.Value = instruction.Value
-				v.save(field.key(), field.Value)
+				v.storage.save(field.key(), field.Value)
 			} else {
 				// TODO what have to do on empty value
 
-				field.Value = v.load(field.key())
+				field.Value = v.storage.load(field.key())
 				if instruction.Opt == OptIncrement {
 					field.Value = increment(field.Value)
-					v.save(field.key(), field.Value)
+					v.storage.save(field.key(), field.Value)
 				}
 			}
 		}
@@ -159,35 +136,35 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 func (v *Visitor) decode(instruction *Instruction) interface{} {
 	switch instruction.Type {
 	case TypeUint32, TypeLength:
-		tmp, _, err := v.reader.ReadUint32(instruction.IsNullable())
+		tmp, err := v.reader.ReadUint32(instruction.IsNullable())
 		if err != nil {
 			panic(err)
 		}
-		return tmp
+		return *tmp
 	case TypeUint64:
-		tmp, _, err := v.reader.ReadUint64(instruction.IsNullable())
+		tmp, err := v.reader.ReadUint64(instruction.IsNullable())
 		if err != nil {
 			panic(err)
 		}
-		return tmp
+		return *tmp
 	case TypeString:
-		tmp, _, err := v.reader.ReadAsciiString(instruction.IsNullable())
+		tmp, err := v.reader.ReadAsciiString(instruction.IsNullable())
 		if err != nil {
 			panic(err)
 		}
-		return tmp
+		return *tmp
 	case TypeInt64, TypeMantissa:
-		tmp, _, err := v.reader.ReadInt64(instruction.IsNullable())
+		tmp, err := v.reader.ReadInt64(instruction.IsNullable())
 		if err != nil {
 			panic(err)
 		}
-		return tmp
+		return *tmp
 	case TypeInt32, TypeExponent:
-		tmp, _, err := v.reader.ReadInt32(instruction.IsNullable())
+		tmp, err := v.reader.ReadInt32(instruction.IsNullable())
 		if err != nil {
 			panic(err)
 		}
-		return tmp
+		return *tmp
 	default:
 		return nil
 	}
