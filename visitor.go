@@ -84,7 +84,7 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 
 	switch instruction.Opt {
 	case OptNone:
-		field.Value = v.decode(instruction)
+		v.decode(instruction, field)
 		v.storage.save(field.key(), field.Value)
 	case OptConstant:
 		if instruction.IsOptional() {
@@ -97,13 +97,13 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 		v.storage.save(field.key(), field.Value)
 	case OptDefault:
 		if v.current.IsNextBitSet() {
-			field.Value = v.decode(instruction)
+			v.decode(instruction, field)
 		} else{
 			field.Value = instruction.Value
 			v.storage.save(field.key(), field.Value)
 		}
 	case OptDelta:
-		field.Value = v.decode(instruction)
+		v.decode(instruction, field)
 		if previous := v.storage.load(field.key()); previous != nil {
 			field.Value = sum(field.Value, previous)
 		}
@@ -112,7 +112,7 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 		// TODO
 	case OptCopy, OptIncrement:
 		if v.current.IsNextBitSet() {
-			field.Value = v.decode(instruction)
+			v.decode(instruction, field)
 			v.storage.save(field.key(), field.Value)
 		} else {
 			if v.storage.load(field.key()) == nil {
@@ -133,40 +133,48 @@ func (v *Visitor) visit(instruction *Instruction) *Field {
 	return field
 }
 
-func (v *Visitor) decode(instruction *Instruction) interface{} {
+func (v *Visitor) decode(instruction *Instruction, field *Field) {
 	switch instruction.Type {
 	case TypeUint32, TypeLength:
 		tmp, err := v.reader.ReadUint32(instruction.IsNullable())
 		if err != nil {
 			panic(err)
 		}
-		return *tmp
+		if tmp != nil {
+			field.Value = *tmp
+		}
 	case TypeUint64:
 		tmp, err := v.reader.ReadUint64(instruction.IsNullable())
 		if err != nil {
 			panic(err)
 		}
-		return *tmp
+		if tmp != nil {
+			field.Value = *tmp
+		}
 	case TypeString:
 		tmp, err := v.reader.ReadAsciiString(instruction.IsNullable())
 		if err != nil {
 			panic(err)
 		}
-		return *tmp
+		if tmp != nil {
+			field.Value = *tmp
+		}
 	case TypeInt64, TypeMantissa:
 		tmp, err := v.reader.ReadInt64(instruction.IsNullable())
 		if err != nil {
 			panic(err)
 		}
-		return *tmp
+		if tmp != nil {
+			field.Value = *tmp
+		}
 	case TypeInt32, TypeExponent:
 		tmp, err := v.reader.ReadInt32(instruction.IsNullable())
 		if err != nil {
 			panic(err)
 		}
-		return *tmp
-	default:
-		return nil
+		if tmp != nil {
+			field.Value = *tmp
+		}
 	}
 }
 
