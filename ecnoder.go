@@ -25,6 +25,6 @@ func (e *Encoder) SetLog(writer io.Writer) {
 }
 
 // TODO
-func (d *Decoder) Encode(msg interface{}) error {
+func (e *Encoder) Encode(msg interface{}) error {
 	return nil
 }

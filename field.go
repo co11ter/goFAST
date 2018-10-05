@@ -8,6 +8,7 @@ type Field struct {
 	ID uint // instruction id
 	Name string
 	Type InstructionType
+	TemplateID uint
 
 	Value interface{}
 }

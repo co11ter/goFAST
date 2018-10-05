@@ -2,6 +2,7 @@ package fast
 
 import (
 	"errors"
+	"github.com/kr/pretty"
 	"reflect"
 	"strconv"
 )
@@ -40,6 +41,7 @@ func (m *message) Assign(field *Field) {
 	}
 
 	if rField := reflect.ValueOf(m.msg).Elem().Field(path[0]); rField.Kind() == reflect.Ptr {
+		rField.Set(reflect.New(rField.Type().Elem()))
 		rField.Elem().Set(reflect.ValueOf(field.Value))
 	} else {
 		rField.Set(reflect.ValueOf(field.Value))
@@ -56,6 +58,7 @@ func (m *message) AssignSlice(field *Field, index int) {
 		return
 	}
 
+	pretty.Println("field: ", field, path[0])
 	value := reflect.ValueOf(m.msg).Elem().Field(path[0])
 	if index >= value.Cap() {
 		newCap := value.Cap() + value.Cap()/2
@@ -72,6 +75,7 @@ func (m *message) AssignSlice(field *Field, index int) {
 	}
 
 	if rField := value.Index(index).Field(path[1]); rField.Kind() == reflect.Ptr {
+		rField.Set(reflect.New(rField.Type().Elem()))
 		rField.Elem().Set(reflect.ValueOf(field.Value))
 	} else {
 		rField.Set(reflect.ValueOf(field.Value))

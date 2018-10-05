@@ -12,6 +12,7 @@ const (
 type Decoder struct {
 	repo map[uint]*Template
 	visitor *Visitor
+	tid uint
 
 	logWriter io.Writer
 }
@@ -38,10 +39,10 @@ func (d *Decoder) Decode(msg interface{}) error {
 	d.log("\n  pmap = ", *d.visitor.current, "\n")
 
 	d.log("template parsing: ")
-	templateID := d.visitor.visitTemplateID()
-	d.log("\n  template = ", templateID, "\n")
+	d.tid = d.visitor.visitTemplateID()
+	d.log("\n  template = ", d.tid, "\n")
 
-	tpl, ok := d.repo[uint(templateID)]
+	tpl, ok := d.repo[d.tid]
 	if !ok {
 		return nil
 	}
@@ -67,6 +68,7 @@ func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 
 			d.log("  parsing: ", instruction.Name, " ")
 			field := d.visitor.visit(instruction)
+			field.TemplateID = d.tid
 			d.log("\n    ", field.Name, " = ", field.Value, "\n")
 			msg.AssignSlice(field, i)
 		}
@@ -80,6 +82,7 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 		} else {
 			d.log("parsing: ", instruction.Name, " ")
 			field := d.visitor.visit(instruction)
+			field.TemplateID = d.tid
 			d.log("\n  ", field.Name, " = ", field.Value, "\n")
 			msg.Assign(field)
 		}
