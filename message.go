@@ -2,7 +2,6 @@ package fast
 
 import (
 	"errors"
-	"github.com/kr/pretty"
 	"reflect"
 	"strconv"
 )
@@ -58,7 +57,6 @@ func (m *message) AssignSlice(field *Field, index int) {
 		return
 	}
 
-	pretty.Println("field: ", field, path[0])
 	value := reflect.ValueOf(m.msg).Elem().Field(path[0])
 	if index >= value.Cap() {
 		newCap := value.Cap() + value.Cap()/2
@@ -84,7 +82,16 @@ func (m *message) AssignSlice(field *Field, index int) {
 
 func (m *message) lookUpPath(field *Field) []int {
 	name := strconv.Itoa(int(field.ID))
+	tid  := strconv.Itoa(int(field.TemplateID))
+	if v, ok := m.tagMap[name + "," + tid]; ok {
+		return v
+	}
+
 	if v, ok := m.tagMap[name]; ok {
+		return v
+	}
+
+	if v, ok := m.tagMap[field.Name + "," + tid]; ok {
 		return v
 	}
 
