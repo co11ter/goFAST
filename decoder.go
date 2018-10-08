@@ -48,7 +48,9 @@ func (d *Decoder) Decode(msg interface{}) error {
 	}
 
 	m := newMsg(msg)
+	m.assignTID(d.tid)
 	d.decodeSegment(tpl.Instructions, m)
+	d.tid = 0
 
 	return nil
 }

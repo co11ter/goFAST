@@ -16,3 +16,7 @@ func newAcceptor(writer io.Writer) *Acceptor {
 		writer: NewWriter(writer),
 	}
 }
+
+func (a *Acceptor) accept(instruction *Instruction, field *Field) {
+
+}

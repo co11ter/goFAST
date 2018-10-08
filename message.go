@@ -29,6 +29,38 @@ func newMsg(msg interface{}) *message {
 	return m
 }
 
+// TODO
+func (m *message) LookUp(field *Field) {
+	return
+}
+
+// TODO
+func (m *message) LookUpSlice(field *Field) {
+	return
+}
+
+func (m *message) LookUpTID() uint {
+	path, ok := m.tagMap["*"]
+	if !ok {
+		return 0
+	}
+	return uint(reflect.ValueOf(m.msg).Elem().Field(path[0]).Uint())
+}
+
+func (m *message) assignTID(tid uint) {
+	path, ok := m.tagMap["*"]
+	if !ok {
+		return
+	}
+
+	if rField := reflect.ValueOf(m.msg).Elem().Field(path[0]); rField.Kind() == reflect.Ptr {
+		rField.Set(reflect.New(rField.Type().Elem()))
+		rField.Elem().Set(reflect.ValueOf(tid))
+	} else {
+		rField.Set(reflect.ValueOf(tid))
+	}
+}
+
 func (m *message) Assign(field *Field) {
 	if field.Value == nil {
 		return

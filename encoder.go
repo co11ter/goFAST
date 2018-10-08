@@ -5,6 +5,7 @@ import "io"
 type Encoder struct {
 	repo map[uint]*Template
 	acceptor *Acceptor
+	tid uint
 
 	logWriter io.Writer
 }
@@ -24,7 +25,33 @@ func (e *Encoder) SetLog(writer io.Writer) {
 	e.logWriter = writer
 }
 
-// TODO
 func (e *Encoder) Encode(msg interface{}) error {
+	m := newMsg(msg)
+	e.tid = m.LookUpTID()
+
+	tpl, ok := e.repo[e.tid]
+	if !ok {
+		return nil
+	}
+
+	e.encodeSegment(tpl.Instructions, m)
+
 	return nil
+}
+
+func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
+	for _, instruction := range instructions {
+		if instruction.Type == TypeSequence {
+			e.encodeSequence(instruction.Instructions, msg)
+		} else {
+			field := &Field{}
+
+			msg.LookUp(field)
+			e.acceptor.accept(instruction, field)
+		}
+	}
+}
+
+func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message) {
+
 }
