@@ -8,7 +8,7 @@ import (
 
 type Reader struct {
 	reader io.ByteReader
-	buf bytes.Buffer
+	strBuf bytes.Buffer
 	last byte
 }
 
@@ -211,17 +211,17 @@ func (r *Reader) ReadAsciiString(nullable bool) (*string, error) {
 
 	for {
 		if (r.last & 0x80) > 0 {
-			r.buf.WriteByte(r.last & 0x7F)
+			r.strBuf.WriteByte(r.last & 0x7F)
 			break
 		}
-		r.buf.WriteByte(r.last)
+		r.strBuf.WriteByte(r.last)
 		r.last, err = r.reader.ReadByte()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	result = r.buf.String()
-	r.buf.Reset()
+	result = r.strBuf.String()
+	r.strBuf.Reset()
 	return &result, nil
 }
