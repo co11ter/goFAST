@@ -1,6 +1,8 @@
 package fast
 
-import "io"
+import (
+	"io"
+)
 
 type Encoder struct {
 	repo map[uint]*Template
@@ -44,7 +46,11 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 		if instruction.Type == TypeSequence {
 			e.encodeSequence(instruction.Instructions, msg)
 		} else {
-			field := &Field{}
+			field := &Field{
+				ID: instruction.ID,
+				Name: instruction.Name,
+				TemplateID: e.tid,
+			}
 
 			msg.LookUp(field)
 			e.acceptor.accept(instruction, field)

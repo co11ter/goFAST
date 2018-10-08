@@ -31,6 +31,18 @@ func newMsg(msg interface{}) *message {
 
 // TODO
 func (m *message) LookUp(field *Field) {
+	path := m.lookUpPath(field)
+	if len(path) == 0 {
+		return
+	}
+
+	if rField := reflect.ValueOf(m.msg).Elem().Field(path[0]); rField.Kind() == reflect.Ptr {
+		if !rField.IsNil() {
+			field.Value = rField.Elem().Interface()
+		}
+	} else {
+		field.Value = rField.Interface()
+	}
 	return
 }
 
