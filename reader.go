@@ -181,7 +181,11 @@ func (r *Reader) ReadAsciiString(nullable bool) (*string, error) {
 
 	if (r.last & 0x7F) == 0 {
 		if r.last == 0x80 {
-			return &result, nil
+			if nullable {
+				return nil, nil
+			} else {
+				return &result, nil
+			}
 		}
 
 		r.last, err = r.reader.ReadByte()
