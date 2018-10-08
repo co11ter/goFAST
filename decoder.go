@@ -58,7 +58,7 @@ func (d *Decoder) Decode(msg interface{}) error {
 func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 	d.log("sequence start: ")
 
-	length := int(d.visitor.visit(instructions[0]).Value.(uint32))
+	length := int(d.visitor.visit(instructions[0]).(uint32))
 	d.log("\n  length = ", length, "\n")
 
 	for i:=0; i<length; i++ {
@@ -69,8 +69,12 @@ func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 		for _, instruction := range instructions[1:] {
 
 			d.log("  parsing: ", instruction.Name, " ")
-			field := d.visitor.visit(instruction)
-			field.TemplateID = d.tid
+			field := &Field{
+				ID: instruction.ID,
+				Name: instruction.Name,
+				TemplateID: d.tid,
+			}
+			field.Value = d.visitor.visit(instruction)
 			d.log("\n    ", field.Name, " = ", field.Value, "\n")
 			msg.AssignSlice(field, i)
 		}
@@ -83,8 +87,12 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 			d.decodeSequence(instruction.Instructions, msg)
 		} else {
 			d.log("parsing: ", instruction.Name, " ")
-			field := d.visitor.visit(instruction)
-			field.TemplateID = d.tid
+			field := &Field{
+				ID: instruction.ID,
+				Name: instruction.Name,
+				TemplateID: d.tid,
+			}
+			field.Value = d.visitor.visit(instruction)
 			d.log("\n  ", field.Name, " = ", field.Value, "\n")
 			msg.Assign(field)
 		}

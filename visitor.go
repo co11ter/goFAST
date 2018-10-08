@@ -49,91 +49,86 @@ func (v *Visitor) visitTemplateID() uint {
 }
 
 // TODO need refactor
-func (v *Visitor) visitDecimal(instruction *Instruction, field *Field) {
+func (v *Visitor) visitDecimal(instruction *Instruction) interface{} {
 	var mantissa int64
 	var exponent int32
 	for _, in := range instruction.Instructions {
 		if in.Type == TypeMantissa {
 			mField := v.visit(in)
-			mantissa = mField.Value.(int64)
+			mantissa = mField.(int64)
 		}
 		if in.Type == TypeExponent {
 			eField := v.visit(in)
-			exponent = eField.Value.(int32)
+			exponent = eField.(int32)
 		}
 	}
 
-	field.Value, _ = (&big.Float{}).SetMantExp(
+	result, _ := (&big.Float{}).SetMantExp(
 		(&big.Float{}).SetInt64(mantissa),
 		int(exponent),
 	).Float64()
+	return result
 }
 
-func (v *Visitor) visit(instruction *Instruction) *Field {
-	field := &Field{
-		ID: instruction.ID,
-		Name: instruction.Name,
-		Type: instruction.Type,
-	}
+func (v *Visitor) visit(instruction *Instruction) (result interface{}) {
 
 	// TODO
 	if instruction.Type == TypeDecimal {
-		v.visitDecimal(instruction, field)
-		return field
+		return v.visitDecimal(instruction)
 	}
 
 	switch instruction.Opt {
 	case OptNone:
-		v.decode(instruction, field)
-		v.storage.save(field.key(), field.Value)
+		result = v.decode(instruction)
+		v.storage.save(instruction.key(), result)
 	case OptConstant:
 		if instruction.IsOptional() {
 			if v.current.IsNextBitSet() {
-				field.Value = instruction.Value
+				result = instruction.Value
 			}
 		} else {
-			field.Value = instruction.Value
+			result = instruction.Value
 		}
-		v.storage.save(field.key(), field.Value)
+		v.storage.save(instruction.key(), result)
 	case OptDefault:
 		if v.current.IsNextBitSet() {
-			v.decode(instruction, field)
+			result = v.decode(instruction)
 		} else{
-			field.Value = instruction.Value
-			v.storage.save(field.key(), field.Value)
+			result = instruction.Value
+			v.storage.save(instruction.key(), result)
 		}
 	case OptDelta:
-		v.decode(instruction, field)
-		if previous := v.storage.load(field.key()); previous != nil {
-			field.Value = sum(field.Value, previous)
+		result = v.decode(instruction)
+		if previous := v.storage.load(instruction.key()); previous != nil {
+			result = sum(result, previous)
 		}
-		v.storage.save(field.key(), field.Value)
+		v.storage.save(instruction.key(), result)
 	case OptTail:
 		// TODO
 	case OptCopy, OptIncrement:
 		if v.current.IsNextBitSet() {
-			v.decode(instruction, field)
-			v.storage.save(field.key(), field.Value)
+			result = v.decode(instruction)
+			v.storage.save(instruction.key(), result)
 		} else {
-			if v.storage.load(field.key()) == nil {
-				field.Value = instruction.Value
-				v.storage.save(field.key(), field.Value)
+			if v.storage.load(instruction.key()) == nil {
+				result = instruction.Value
+				v.storage.save(instruction.key(), result)
 			} else {
 				// TODO what have to do on empty value
 
-				field.Value = v.storage.load(field.key())
+				result = v.storage.load(instruction.key())
 				if instruction.Opt == OptIncrement {
-					field.Value = increment(field.Value)
-					v.storage.save(field.key(), field.Value)
+					result = increment(result)
+					v.storage.save(instruction.key(), result)
 				}
 			}
 		}
 	}
 
-	return field
+	return result
 }
 
-func (v *Visitor) decode(instruction *Instruction, field *Field) {
+func (v *Visitor) decode(instruction *Instruction) interface{} {
 	switch instruction.Type {
 	case TypeUint32, TypeLength:
 		tmp, err := v.reader.ReadUint32(instruction.IsNullable())
@@ -141,7 +136,7 @@ func (v *Visitor) decode(instruction *Instruction, field *Field) {
 			panic(err)
 		}
 		if tmp != nil {
-			field.Value = *tmp
+			return *tmp
 		}
 	case TypeUint64:
 		tmp, err := v.reader.ReadUint64(instruction.IsNullable())
@@ -149,7 +144,7 @@ func (v *Visitor) decode(instruction *Instruction, field *Field) {
 			panic(err)
 		}
 		if tmp != nil {
-			field.Value = *tmp
+			return *tmp
 		}
 	case TypeString:
 		tmp, err := v.reader.ReadAsciiString(instruction.IsNullable())
@@ -157,7 +152,7 @@ func (v *Visitor) decode(instruction *Instruction, field *Field) {
 			panic(err)
 		}
 		if tmp != nil {
-			field.Value = *tmp
+			return *tmp
 		}
 	case TypeInt64, TypeMantissa:
 		tmp, err := v.reader.ReadInt64(instruction.IsNullable())
@@ -165,7 +160,7 @@ func (v *Visitor) decode(instruction *Instruction, field *Field) {
 			panic(err)
 		}
 		if tmp != nil {
-			field.Value = *tmp
+			return *tmp
 		}
 	case TypeInt32, TypeExponent:
 		tmp, err := v.reader.ReadInt32(instruction.IsNullable())
@@ -173,9 +168,10 @@ func (v *Visitor) decode(instruction *Instruction, field *Field) {
 			panic(err)
 		}
 		if tmp != nil {
-			field.Value = *tmp
+			return *tmp
 		}
 	}
+	return nil
 }
 
 // TODO need implements for string

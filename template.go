@@ -75,6 +75,10 @@ type Instruction struct {
 	Value interface{}
 }
 
+func (i *Instruction) key() string {
+	return strconv.Itoa(int(i.ID)) + ":" + i.Name + ":" + strconv.Itoa(int(i.Type))
+}
+
 func (i *Instruction) IsOptional() bool {
 	return i.Presence == PresenceOptional
 }
