@@ -59,6 +59,7 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 			e.acceptor.accept(instruction, field)
 		}
 	}
+	e.acceptor.commit()
 }
 
 func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message) {

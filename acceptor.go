@@ -17,6 +17,10 @@ func newAcceptor(writer io.Writer) *Acceptor {
 	}
 }
 
+func (a *Acceptor) commit() error {
+	return a.writer.commit()
+}
+
 func (a *Acceptor) acceptPMap() {
 	a.current = &PMap{mask: 128}
 }
