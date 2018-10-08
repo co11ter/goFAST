@@ -56,7 +56,7 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 			}
 
 			msg.LookUp(field)
-			e.acceptor.accept(instruction, field)
+			e.acceptor.accept(instruction, field.Value)
 		}
 	}
 	e.acceptor.commit()

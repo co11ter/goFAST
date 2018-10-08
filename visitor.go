@@ -189,6 +189,21 @@ func sum(values ...interface{}) (res interface{}) {
 	return
 }
 
+// TODO need implements for string
+func delta(values ...interface{}) (res interface{}) {
+	switch values[0].(type) {
+	case int64:
+		res = values[0].(int64)-int64(toInt(values[1]))
+	case int32:
+		res = values[0].(int32)-int32(toInt(values[1]))
+	case uint64:
+		res = values[0].(uint64)-uint64(toInt(values[1]))
+	case uint32:
+		res = values[0].(uint32)-uint32(toInt(values[1]))
+	}
+	return
+}
+
 func toInt(value interface{}) int {
 	switch value.(type) {
 	case int64:
