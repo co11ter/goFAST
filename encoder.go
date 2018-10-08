@@ -36,6 +36,9 @@ func (e *Encoder) Encode(msg interface{}) error {
 		return nil
 	}
 
+	e.acceptor.acceptPMap()
+	e.acceptor.acceptTemplateID(uint32(e.tid))
+
 	e.encodeSegment(tpl.Instructions, m)
 
 	return nil
