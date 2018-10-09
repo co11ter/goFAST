@@ -2,29 +2,33 @@ package fast
 
 import (
 	"bytes"
-	"github.com/kr/pretty"
 	"io"
 )
 
-type Writer struct {
-	writer io.Writer
-	buf bytes.Buffer
+type buffer interface {
+	io.Writer
+	io.WriterTo
 }
 
-func NewWriter(writer io.Writer) *Writer {
-	return &Writer{writer, bytes.Buffer{}}
+type Writer struct {
+	buf buffer
+	strBuf bytes.Buffer
+}
+
+func NewWriter(buf buffer) *Writer {
+	return &Writer{buf: buf}
 }
 
 // TODO
-func (w *Writer) commit() error {
-	pretty.Println("bytes: ", w.buf.Bytes())
-	//_, err := w.buf.WriteTo(w.writer)
-	return nil
+func (w *Writer) WriteTo(writer io.Writer) error {
+	_, err := w.buf.WriteTo(writer)
+	return err
 }
 
 func (w *Writer) WriteUint32(nullable bool, value uint32) error {
 	if !nullable && value == 0 {
-		return w.buf.WriteByte(0x80)
+		w.buf.Write([]byte{0x80})
+		return nil
 	}
 
 	b := make([]byte, 5)
@@ -43,7 +47,8 @@ func (w *Writer) WriteUint32(nullable bool, value uint32) error {
 
 func (w *Writer) WriteUint64(nullable bool, value uint64) error {
 	if !nullable && value == 0 {
-		return w.buf.WriteByte(0x80)
+		w.buf.Write([]byte{0x80})
+		return nil
 	}
 
 	b := make([]byte, 10)
@@ -62,7 +67,8 @@ func (w *Writer) WriteUint64(nullable bool, value uint64) error {
 
 func (w *Writer) WriteInt32(nullable bool, value int32) error {
 	if !nullable && value == 0 {
-		return w.buf.WriteByte(0x80)
+		w.buf.Write([]byte{0x80})
+		return nil
 	}
 
 	positive := value > 0
@@ -103,7 +109,8 @@ func (w *Writer) WriteInt32(nullable bool, value int32) error {
 
 func (w *Writer) WriteInt64(nullable bool, value int64) error {
 	if !nullable && value == 0 {
-		return w.buf.WriteByte(0x80)
+		w.buf.Write([]byte{0x80})
+		return nil
 	}
 
 	positive := value > 0
@@ -147,13 +154,14 @@ func (w *Writer) WriteUtfString(nullable bool, value string) error {
 	return nil
 }
 
-// TODO
 func (w *Writer) WriteAsciiString(nullable bool, value string) error {
 	if len(value) == 0 {
 		if nullable {
-			w.buf.WriteByte(0x00)
+			w.buf.Write([]byte{0x00})
+			return nil
 		}
-		return w.buf.WriteByte(0x80)
+		w.buf.Write([]byte{0x00})
+		return nil
 	}
 
 	if len(value) == 1 && value[0] == 0x00 {
@@ -165,10 +173,14 @@ func (w *Writer) WriteAsciiString(nullable bool, value string) error {
 		return nil
 	}
 
-	w.buf.WriteString(value[:len(value)-1])
-	return w.buf.WriteByte(value[len(value)-1] | 0x80)
+	w.strBuf.WriteString(value[:len(value)-1])
+	w.buf.Write(w.strBuf.Bytes())
+	w.strBuf.Reset()
+	w.buf.Write([]byte{value[len(value)-1] | 0x80})
+	return nil
 }
 
 func (w *Writer) WriteNil() error {
-	return w.buf.WriteByte(0x80)
+	w.buf.Write([]byte{0x80})
+	return nil
 }

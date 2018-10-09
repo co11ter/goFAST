@@ -9,18 +9,23 @@ type Acceptor struct {
 	current *PMap
 	storage storage
 
-	writer *Writer
+	buf *Writer
+	writer io.Writer
 }
 
 func newAcceptor(writer io.Writer) *Acceptor {
 	return &Acceptor{
 		storage: make(map[string]interface{}),
-		writer: NewWriter(writer),
+		writer: writer,
 	}
 }
 
+func (a *Acceptor) setBuffer(buf buffer) {
+	a.buf = NewWriter(buf)
+}
+
 func (a *Acceptor) commit() error {
-	return a.writer.commit()
+	return a.buf.WriteTo(a.writer)
 }
 
 func (a *Acceptor) acceptPMap() {
@@ -35,7 +40,7 @@ func (a *Acceptor) acceptPMap() {
 
 func (a *Acceptor) acceptTemplateID(id uint32) {
 	a.current.SetNextBit(true)
-	a.writer.WriteUint32(false, id)
+	a.buf.WriteUint32(false, id)
 }
 
 func (a *Acceptor) accept(instruction *Instruction, value interface{}) {
@@ -89,7 +94,7 @@ func (a *Acceptor) accept(instruction *Instruction, value interface{}) {
 
 func (a *Acceptor) encode(instruction *Instruction, value interface{}) {
 	if value == nil {
-		err := a.writer.WriteNil()
+		err := a.buf.WriteNil()
 		if err != nil {
 			panic(err)
 		}
@@ -98,27 +103,27 @@ func (a *Acceptor) encode(instruction *Instruction, value interface{}) {
 
 	switch instruction.Type {
 	case TypeUint32, TypeLength:
-		err := a.writer.WriteUint32(instruction.IsNullable(), value.(uint32))
+		err := a.buf.WriteUint32(instruction.IsNullable(), value.(uint32))
 		if err != nil {
 			panic(err)
 		}
 	case TypeUint64:
-		err := a.writer.WriteUint64(instruction.IsNullable(), value.(uint64))
+		err := a.buf.WriteUint64(instruction.IsNullable(), value.(uint64))
 		if err != nil {
 			panic(err)
 		}
 	case TypeString:
-		err := a.writer.WriteAsciiString(instruction.IsNullable(), value.(string))
+		err := a.buf.WriteAsciiString(instruction.IsNullable(), value.(string))
 		if err != nil {
 			panic(err)
 		}
 	case TypeInt64, TypeMantissa:
-		err := a.writer.WriteInt64(instruction.IsNullable(), value.(int64))
+		err := a.buf.WriteInt64(instruction.IsNullable(), value.(int64))
 		if err != nil {
 			panic(err)
 		}
 	case TypeInt32, TypeExponent:
-		err := a.writer.WriteInt32(instruction.IsNullable(), value.(int32))
+		err := a.buf.WriteInt32(instruction.IsNullable(), value.(int32))
 		if err != nil {
 			panic(err)
 		}

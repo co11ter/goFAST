@@ -1,6 +1,8 @@
 package fast
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 )
 
@@ -20,14 +22,17 @@ func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 	for _, t := range tmps {
 		encoder.repo[t.ID] = t
 	}
+	encoder.acceptor.setBuffer(&bytes.Buffer{})
 	return encoder
 }
 
 func (e *Encoder) SetLog(writer io.Writer) {
 	e.logWriter = writer
+	e.acceptor.setBuffer(newLogger(writer))
 }
 
 func (e *Encoder) Encode(msg interface{}) error {
+	e.log("// ----- new message start ----- //\n")
 	m := newMsg(msg)
 	e.tid = m.LookUpTID()
 
@@ -37,6 +42,8 @@ func (e *Encoder) Encode(msg interface{}) error {
 	}
 
 	e.acceptor.acceptPMap()
+	e.log("template = ", e.tid)
+	e.log("\n  encoding -> ")
 	e.acceptor.acceptTemplateID(uint32(e.tid))
 
 	e.encodeSegment(tpl.Instructions, m)
@@ -62,16 +69,22 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 			}
 
 			msg.LookUp(field)
+			e.log("\n", instruction.Name, " = ", field.Value, "\n")
+			e.log("  encoding -> ")
 			e.acceptor.accept(instruction, field.Value)
 		}
 	}
+	e.log("\n")
 	e.acceptor.commit()
 }
 
 func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message, length int) {
-
+	e.log("\nsequence start: ")
+	e.log("\n  length = ", length, "\n")
+	e.log("    encoding -> ")
 	e.acceptor.accept(instructions[0], uint32(length))
 	for i:=0; i<length; i++ {
+		e.log("\n  sequence elem[", i, "] start: ")
 		e.acceptor.acceptPMap()
 		for _, instruction := range instructions[1:] {
 			field := &Field{
@@ -81,7 +94,17 @@ func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message, leng
 			}
 
 			msg.LookUpSlice(field, i)
+			e.log("\n    ", instruction.Name, " = ", field.Value, "\n")
+			e.log("      encoding -> ")
 			e.acceptor.accept(instruction, field.Value)
 		}
 	}
+}
+
+func (e *Encoder) log(param ...interface{}) {
+	if e.logWriter == nil {
+		return
+	}
+
+	e.logWriter.Write([]byte(fmt.Sprint(param...)))
 }
