@@ -22,20 +22,16 @@ func (w *Writer) commit() error {
 	return nil
 }
 
-func (w *Writer) WriteUint32(nullable bool, value *uint32) error {
-	if nullable {
-		if value == nil {
-			return w.buf.WriteByte(0x80)
-		}
-	} else if *value == 0 {
+func (w *Writer) WriteUint32(nullable bool, value uint32) error {
+	if !nullable && value == 0 {
 		return w.buf.WriteByte(0x80)
 	}
 
 	b := make([]byte, 5)
 	i := 4
-	for i >= 0 && *value != 0 {
-		b[i] = byte(*value & 0x7F)
-		*value >>= 7
+	for i >= 0 && value != 0 {
+		b[i] = byte(value & 0x7F)
+		value >>= 7
 		i--
 	}
 
@@ -46,27 +42,27 @@ func (w *Writer) WriteUint32(nullable bool, value *uint32) error {
 }
 
 // TODO
-func (w *Writer) WriteUint64(nullable bool, value *uint64) error {
+func (w *Writer) WriteUint64(nullable bool, value uint64) error {
 	return nil
 }
 
 // TODO
-func (w *Writer) WriteInt32(nullable bool, value *int32) error {
+func (w *Writer) WriteInt32(nullable bool, value int32) error {
 	return nil
 }
 
 // TODO
-func (w *Writer) WriteInt64(nullable bool, value *int64) error {
+func (w *Writer) WriteInt64(nullable bool, value int64) error {
 	return nil
 }
 
 // TODO
-func (w *Writer) WriteUtfString(nullable bool, value *string) error {
+func (w *Writer) WriteUtfString(nullable bool, value string) error {
 	return nil
 }
 
 // TODO
-func (w *Writer) WriteAsciiString(nullable bool, value *string) error {
+func (w *Writer) WriteAsciiString(nullable bool, value string) error {
 	return nil
 }
 

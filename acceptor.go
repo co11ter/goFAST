@@ -29,7 +29,7 @@ func (a *Acceptor) acceptPMap() {
 
 func (a *Acceptor) acceptTemplateID(id uint32) {
 	a.current.SetNextBit(true)
-	a.writer.WriteUint32(false, &id)
+	a.writer.WriteUint32(false, id)
 }
 
 func (a *Acceptor) accept(instruction *Instruction, value interface{}) {
@@ -92,32 +92,27 @@ func (a *Acceptor) encode(instruction *Instruction, value interface{}) {
 
 	switch instruction.Type {
 	case TypeUint32, TypeLength:
-		tmp := value.(uint32)
-		err := a.writer.WriteUint32(instruction.IsNullable(), &tmp)
+		err := a.writer.WriteUint32(instruction.IsNullable(), value.(uint32))
 		if err != nil {
 			panic(err)
 		}
 	case TypeUint64:
-		tmp := value.(uint64)
-		err := a.writer.WriteUint64(instruction.IsNullable(), &tmp)
+		err := a.writer.WriteUint64(instruction.IsNullable(), value.(uint64))
 		if err != nil {
 			panic(err)
 		}
 	case TypeString:
-		tmp := value.(string)
-		err := a.writer.WriteAsciiString(instruction.IsNullable(), &tmp)
+		err := a.writer.WriteAsciiString(instruction.IsNullable(), value.(string))
 		if err != nil {
 			panic(err)
 		}
 	case TypeInt64, TypeMantissa:
-		tmp := value.(int64)
-		err := a.writer.WriteInt64(instruction.IsNullable(), &tmp)
+		err := a.writer.WriteInt64(instruction.IsNullable(), value.(int64))
 		if err != nil {
 			panic(err)
 		}
 	case TypeInt32, TypeExponent:
-		tmp := value.(int32)
-		err := a.writer.WriteInt32(instruction.IsNullable(), &tmp)
+		err := a.writer.WriteInt32(instruction.IsNullable(), value.(int32))
 		if err != nil {
 			panic(err)
 		}
