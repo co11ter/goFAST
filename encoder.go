@@ -47,7 +47,13 @@ func (e *Encoder) Encode(msg interface{}) error {
 func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 	for _, instruction := range instructions {
 		if instruction.Type == TypeSequence {
-			e.encodeSequence(instruction.Instructions, msg)
+			field := &Field{
+				ID: instruction.ID,
+				Name: instruction.Name,
+				TemplateID: e.tid,
+			}
+			msg.LookUpLen(field)
+			e.encodeSequence(instruction.Instructions, msg, field.Value.(int))
 		} else {
 			field := &Field{
 				ID: instruction.ID,
@@ -62,6 +68,20 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 	e.acceptor.commit()
 }
 
-func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message) {
+func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message, length int) {
 
+	e.acceptor.accept(instructions[0], uint32(length))
+	for i:=0; i<length; i++ {
+		e.acceptor.acceptPMap()
+		for _, instruction := range instructions[1:] {
+			field := &Field{
+				ID: instruction.ID,
+				Name: instruction.Name,
+				TemplateID: e.tid,
+			}
+
+			msg.LookUpSlice(field, i)
+			e.acceptor.accept(instruction, field.Value)
+		}
+	}
 }

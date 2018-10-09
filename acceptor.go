@@ -24,7 +24,13 @@ func (a *Acceptor) commit() error {
 }
 
 func (a *Acceptor) acceptPMap() {
-	a.current = &PMap{mask: 128}
+	if a.current == nil {
+		a.current = &PMap{mask: 128}
+	} else {
+		tmp := *a.current
+		a.current = &PMap{mask: 128}
+		a.prev = &tmp
+	}
 }
 
 func (a *Acceptor) acceptTemplateID(id uint32) {

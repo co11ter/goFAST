@@ -29,7 +29,6 @@ func newMsg(msg interface{}) *message {
 	return m
 }
 
-// TODO
 func (m *message) LookUp(field *Field) {
 	path := m.lookUpPath(field)
 	if len(path) == 0 {
@@ -43,12 +42,31 @@ func (m *message) LookUp(field *Field) {
 	} else {
 		field.Value = rField.Interface()
 	}
-	return
 }
 
-// TODO
-func (m *message) LookUpSlice(field *Field) {
-	return
+func (m *message) LookUpLen(field *Field) {
+	path := m.lookUpPath(field)
+	if len(path) == 0 {
+		return
+	}
+
+	field.Value = reflect.ValueOf(m.msg).Elem().Field(path[0]).Len()
+}
+
+func (m *message) LookUpSlice(field *Field, index int) {
+	path := m.lookUpPath(field)
+	if len(path) < 2 {
+		return
+	}
+
+	rField := reflect.ValueOf(m.msg).Elem().Field(path[0]).Index(index).Field(path[1])
+	if rField.Kind() == reflect.Ptr {
+		if !rField.IsNil() {
+			field.Value = rField.Elem().Interface()
+		}
+	} else {
+		field.Value = rField.Interface()
+	}
 }
 
 func (m *message) LookUpTID() uint {
