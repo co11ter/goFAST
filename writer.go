@@ -31,6 +31,10 @@ func (w *Writer) WriteUint32(nullable bool, value uint32) error {
 		return nil
 	}
 
+	if nullable && value > 0 {
+		value++
+	}
+
 	b := make([]byte, 5)
 	i := 4
 	for i >= 0 && value != 0 {
@@ -49,6 +53,10 @@ func (w *Writer) WriteUint64(nullable bool, value uint64) error {
 	if !nullable && value == 0 {
 		w.buf.Write([]byte{0x80})
 		return nil
+	}
+
+	if nullable && value > 0 {
+		value++
 	}
 
 	b := make([]byte, 10)
