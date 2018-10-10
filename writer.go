@@ -7,21 +7,49 @@ import (
 
 type buffer interface {
 	io.Writer
-	io.WriterTo
+	Bytes() []byte
+	Reset()
 }
 
 type Writer struct {
 	buf buffer
 	strBuf bytes.Buffer
+	tmpBuf bytes.Buffer
 }
 
 func NewWriter(buf buffer) *Writer {
 	return &Writer{buf: buf}
 }
 
-// TODO
-func (w *Writer) WriteTo(writer io.Writer) error {
-	_, err := w.buf.WriteTo(writer)
+func (w *Writer) Bytes() []byte {
+	b := append(w.buf.Bytes(), w.tmpBuf.Bytes()...)
+	w.buf.Reset()
+	w.tmpBuf.Reset()
+	return b
+}
+
+func (w *Writer) WritePMap(m *PMap) error {
+	_, err := w.tmpBuf.Write(w.buf.Bytes())
+	w.buf.Reset()
+	if err != nil {
+		return err
+	}
+
+	if m.value == 0 {
+		_, err = w.buf.Write([]byte{0x80})
+		return err
+	}
+
+	b := make([]byte, 8)
+	i :=7
+	for i >= 0 && m.value != 0 {
+		b[i] = byte(m.value)
+		m.value >>= 7
+		i--
+	}
+	b[7] |= 0x80
+
+	_, err = w.buf.Write(b[i+1:])
 	return err
 }
 

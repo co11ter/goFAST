@@ -3,6 +3,7 @@ package fast
 type PMap struct {
 	bitmap uint
 	mask uint
+	value uint
 }
 
 func (p *PMap) IsNextBitSet() bool {
@@ -12,7 +13,7 @@ func (p *PMap) IsNextBitSet() bool {
 
 func (p *PMap) SetNextBit(v bool) {
 	p.mask >>= 1
-	//if (v) {
-	//	value_ |= mask_;
-	//}
+	if v {
+		p.value |= p.mask;
+	}
 }

@@ -74,8 +74,12 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 			e.acceptor.accept(instruction, field.Value)
 		}
 	}
+	e.log("\npmap = ", e.acceptor.current, "\n")
+	e.log("  encoding -> ")
+	e.acceptor.writePMap()
 	e.log("\n")
 	e.acceptor.commit()
+	e.log("\n")
 }
 
 func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message, length int) {
@@ -83,6 +87,8 @@ func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message, leng
 	e.log("\n  length = ", length, "\n")
 	e.log("    encoding -> ")
 	e.acceptor.accept(instructions[0], uint32(length))
+
+	e.acceptor.writeTmp()
 	for i:=0; i<length; i++ {
 		e.log("\n  sequence elem[", i, "] start: ")
 		e.acceptor.acceptPMap()
@@ -98,6 +104,11 @@ func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message, leng
 			e.log("      encoding -> ")
 			e.acceptor.accept(instruction, field.Value)
 		}
+
+		e.log("\n  pmap = ", e.acceptor.current, "\n")
+		e.log("    encoding -> ")
+		e.acceptor.writePMap()
+		e.acceptor.writeChunk()
 	}
 }
 
