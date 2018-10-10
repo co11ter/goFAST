@@ -65,39 +65,11 @@ const (
 	PresenceOptional
 )
 
-type Instruction struct {
-	ID uint
-	Name string
-	Presence InstructionPresence
-	Type InstructionType
-	Opt InstructionOpt
-	Instructions []*Instruction
-	Value interface{}
-}
-
-func (i *Instruction) key() string {
-	return strconv.Itoa(int(i.ID)) + ":" + i.Name + ":" + strconv.Itoa(int(i.Type))
-}
-
-func (i *Instruction) IsOptional() bool {
-	return i.Presence == PresenceOptional
-}
-
-func (i *Instruction) IsNullable() bool {
-	return i.IsOptional() && (i.Opt != OptConstant)
-}
-
-func (i *Instruction) HasPmapBit() bool {
-	return i.Opt > OptDelta || ((i.Opt == OptConstant) && i.Presence == PresenceOptional)
-}
-
 type Template struct {
 	ID uint
 	Name string
 	Instructions []*Instruction
 }
-
-// --------------------------------------------------------
 
 type xmlParser struct {
 	decoder *xml.Decoder

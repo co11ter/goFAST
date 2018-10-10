@@ -58,7 +58,11 @@ func (d *Decoder) Decode(msg interface{}) error {
 func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 	d.log("sequence start: ")
 
-	length := int(d.visitor.visit(instructions[0]).(uint32))
+	tmp, err := d.visitor.visit(instructions[0])
+	if err != nil {
+		panic(err)
+	}
+	length := int(tmp.(uint32))
 	d.log("\n  length = ", length, "\n")
 
 	for i:=0; i<length; i++ {
@@ -74,7 +78,10 @@ func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 				Name: instruction.Name,
 				TemplateID: d.tid,
 			}
-			field.Value = d.visitor.visit(instruction)
+			field.Value, err = d.visitor.visit(instruction)
+			if err != nil {
+				panic(err)
+			}
 			d.log("\n    ", field.Name, " = ", field.Value, "\n")
 			msg.AssignSlice(field, i)
 		}
@@ -82,6 +89,7 @@ func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 }
 
 func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
+	var err error
 	for _, instruction := range instructions {
 		if instruction.Type == TypeSequence {
 			d.decodeSequence(instruction.Instructions, msg)
@@ -92,7 +100,10 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 				Name: instruction.Name,
 				TemplateID: d.tid,
 			}
-			field.Value = d.visitor.visit(instruction)
+			field.Value, err = d.visitor.visit(instruction)
+			if err != nil {
+				panic(err)
+			}
 			d.log("\n  ", field.Name, " = ", field.Value, "\n")
 			msg.Assign(field)
 		}
