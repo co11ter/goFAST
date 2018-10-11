@@ -6,7 +6,6 @@ package fast
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"sync"
 )
@@ -27,7 +26,7 @@ type Encoder struct {
 
 	target io.Writer
 
-	logWriter io.Writer
+	logger *writerLog
 	mu sync.Mutex
 }
 
@@ -52,8 +51,8 @@ func (e *Encoder) SetLog(writer io.Writer) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	e.logWriter = writer
-	e.writer = newWriter(newLogger(writer))
+	e.logger = wrapWriterLog(writer)
+	e.writer = newWriter(e.logger)
 }
 
 // Encode encodes msg struct to writer
@@ -183,9 +182,9 @@ func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message, leng
 }
 
 func (e *Encoder) log(param ...interface{}) {
-	if e.logWriter == nil {
+	if e.logger == nil {
 		return
 	}
 
-	e.logWriter.Write([]byte(fmt.Sprint(param...)))
+	e.logger.Log(param...)
 }

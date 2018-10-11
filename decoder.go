@@ -5,7 +5,6 @@
 package fast
 
 import (
-	"fmt"
 	"io"
 	"sync"
 )
@@ -27,7 +26,7 @@ type Decoder struct {
 
 	reader *reader
 
-	logWriter io.Writer
+	logger *readerLog
 	mu sync.Mutex
 }
 
@@ -49,7 +48,8 @@ func (d *Decoder) SetLog(writer io.Writer) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	d.logWriter = writer
+	d.logger = wrapReaderLog(d.reader.reader, writer)
+	d.reader = newReader(d.logger)
 }
 
 // Decode reads the next FAST-encoded message from reader
@@ -164,9 +164,9 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 }
 
 func (d *Decoder) log(param ...interface{}) {
-	if d.logWriter == nil {
+	if d.logger == nil {
 		return
 	}
 
-	d.logWriter.Write([]byte(fmt.Sprint(param...)))
+	d.logger.Log(param...)
 }

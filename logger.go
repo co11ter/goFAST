@@ -10,16 +10,43 @@ import (
 	"io"
 )
 
-type logger struct {
+type writerLog struct {
 	*bytes.Buffer
 	log io.Writer
 }
 
-func newLogger(logWriter io.Writer) *logger {
-	return &logger{&bytes.Buffer{}, logWriter}
+func wrapWriterLog(writer io.Writer) *writerLog {
+	return &writerLog{&bytes.Buffer{}, writer}
 }
 
-func (l *logger) Write(b []byte) (n int, err error) {
-	l.Buffer.Write(b)
-	return l.log.Write([]byte(fmt.Sprintf("%x", b)))
+func (l *writerLog) Write(b []byte) (n int, err error) {
+	l.log.Write([]byte(fmt.Sprintf("%x", b)))
+	return 	l.Buffer.Write(b)
+}
+
+func (l *writerLog) Log(param ...interface{}) {
+	l.log.Write([]byte(fmt.Sprint(param...)))
+}
+
+type readerLog struct {
+	io.ByteReader
+	log io.Writer
+}
+
+func wrapReaderLog(reader io.ByteReader, writer io.Writer) *readerLog {
+	return &readerLog{reader,writer}
+}
+
+func (l *readerLog) ReadByte() (byte, error) {
+	b, err := l.ByteReader.ReadByte()
+	if err == nil {
+		if _, err := l.log.Write([]byte(fmt.Sprintf("%x", b))); err != nil {
+			return b, err
+		}
+	}
+	return b, err
+}
+
+func (l *readerLog) Log(param ...interface{}) {
+	l.log.Write([]byte(fmt.Sprint(param...)))
 }
