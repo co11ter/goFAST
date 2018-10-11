@@ -22,7 +22,7 @@ type Decoder struct {
 	prev *pMap
 	current *pMap
 
-	reader *Reader
+	reader *reader
 
 	logWriter io.Writer
 }
@@ -58,7 +58,7 @@ func NewDecoder(reader io.ByteReader, tmps ...*Template) *Decoder {
 	decoder := &Decoder{
 		repo: make(map[uint]*Template),
 		storage: newStorage(),
-		reader: NewReader(reader),
+		reader: newReader(reader),
 	}
 	for _, t := range tmps {
 		decoder.repo[t.ID] = t

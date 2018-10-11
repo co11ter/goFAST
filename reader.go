@@ -10,17 +10,17 @@ import (
 	"io"
 )
 
-type Reader struct {
+type reader struct {
 	reader io.ByteReader
 	strBuf bytes.Buffer
 	last byte
 }
 
-func NewReader(reader io.ByteReader) *Reader {
-	return &Reader{reader, bytes.Buffer{}, 0x00}
+func newReader(r io.ByteReader) *reader {
+	return &reader{r, bytes.Buffer{}, 0x00}
 }
 
-func (r *Reader) ReadPMap() (m *pMap, err error) {
+func (r *reader) ReadPMap() (m *pMap, err error) {
 	m = new(pMap)
 	m.mask = 1;
 	for i:=0; i < maxLoadBytes; i++ {
@@ -53,7 +53,7 @@ func (r *Reader) ReadPMap() (m *pMap, err error) {
 	return
 }
 
-func (r *Reader) ReadInt32(nullable bool) (*int32, error) {
+func (r *reader) ReadInt32(nullable bool) (*int32, error) {
 	var err error
 	r.last, err = r.reader.ReadByte()
 	if err != nil {
@@ -86,7 +86,7 @@ func (r *Reader) ReadInt32(nullable bool) (*int32, error) {
 	return &result, nil
 }
 
-func (r *Reader) ReadInt64(nullable bool) (*int64, error) {
+func (r *reader) ReadInt64(nullable bool) (*int64, error) {
 	var err error
 	r.last, err = r.reader.ReadByte()
 	if err != nil {
@@ -119,7 +119,7 @@ func (r *Reader) ReadInt64(nullable bool) (*int64, error) {
 	return &result, nil
 }
 
-func (r *Reader) ReadUint32(nullable bool) (*uint32, error) {
+func (r *reader) ReadUint32(nullable bool) (*uint32, error) {
 	var err error
 	r.last, err = r.reader.ReadByte()
 	if err != nil {
@@ -144,7 +144,7 @@ func (r *Reader) ReadUint32(nullable bool) (*uint32, error) {
 	return &result, nil
 }
 
-func (r *Reader) ReadUint64(nullable bool) (*uint64, error) {
+func (r *reader) ReadUint64(nullable bool) (*uint64, error) {
 	var err error
 	r.last, err = r.reader.ReadByte()
 	if err != nil {
@@ -170,11 +170,11 @@ func (r *Reader) ReadUint64(nullable bool) (*uint64, error) {
 }
 
 // TODO
-func (r *Reader) ReadUtfString(nullable bool) (*string, error) {
+func (r *reader) ReadUtfString(nullable bool) (*string, error) {
 	return nil, nil
 }
 
-func (r *Reader) ReadAsciiString(nullable bool) (*string, error) {
+func (r *reader) ReadAsciiString(nullable bool) (*string, error) {
 	var err error
 	r.last, err = r.reader.ReadByte()
 	if err != nil {

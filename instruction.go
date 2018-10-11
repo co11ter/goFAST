@@ -111,7 +111,7 @@ func (i *Instruction) write(writer *writer, value interface{}) (err error) {
 	return
 }
 
-func (i *Instruction) extract(reader *Reader, s storage, pmap *pMap) (result interface{}, err error) {
+func (i *Instruction) extract(reader *reader, s storage, pmap *pMap) (result interface{}, err error) {
 
 	// TODO need refactor
 	if i.Type == TypeDecimal {
@@ -178,7 +178,7 @@ func (i *Instruction) extract(reader *Reader, s storage, pmap *pMap) (result int
 	return
 }
 
-func (i *Instruction) read(reader *Reader) (result interface{}, err error) {
+func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 	switch i.Type {
 	case TypeUint32, TypeLength:
 		tmp, err := reader.ReadUint32(i.isNullable())
@@ -225,7 +225,7 @@ func (i *Instruction) read(reader *Reader) (result interface{}, err error) {
 	return result, err
 }
 
-func (i *Instruction) extractDecimal(reader *Reader, s storage, pmap *pMap) (interface{}, error) {
+func (i *Instruction) extractDecimal(reader *reader, s storage, pmap *pMap) (interface{}, error) {
 	var mantissa int64
 	var exponent int32
 	for _, in := range i.Instructions {
