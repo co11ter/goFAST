@@ -7,12 +7,15 @@ package fast
 import (
 	"fmt"
 	"io"
+	"sync"
 )
 
 const (
 	maxLoadBytes = (32 << (^uint(0) >> 63)) * 8 / 7 // max size of 7-th bits data
 )
 
+// A Decoder reads and decodes FAST-encoded message from an io.ByteReader.
+// You may need buffered reader since decoder reads data byte by byte.
 type Decoder struct {
 	repo map[uint]*Template
 	storage storage
@@ -25,13 +28,36 @@ type Decoder struct {
 	reader *reader
 
 	logWriter io.Writer
+	mu sync.Mutex
 }
 
+// NewDecoder returns a new decoder that reads from reader.
+func NewDecoder(reader io.ByteReader, tmps ...*Template) *Decoder {
+	decoder := &Decoder{
+		repo: make(map[uint]*Template),
+		storage: newStorage(),
+		reader: newReader(reader),
+	}
+	for _, t := range tmps {
+		decoder.repo[t.ID] = t
+	}
+	return decoder
+}
+
+// SetLog sets writer for logging
 func (d *Decoder) SetLog(writer io.Writer) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	d.logWriter = writer
 }
 
+// Decode reads the next FAST-encoded message from reader
+// and stores it in the value pointed to by msg.
 func (d *Decoder) Decode(msg interface{}) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	d.log("// ----- new message start ----- //\n")
 	d.log("pmap parsing: ")
 	d.visitPMap()
@@ -52,18 +78,6 @@ func (d *Decoder) Decode(msg interface{}) error {
 	d.tid = 0
 
 	return nil
-}
-
-func NewDecoder(reader io.ByteReader, tmps ...*Template) *Decoder {
-	decoder := &Decoder{
-		repo: make(map[uint]*Template),
-		storage: newStorage(),
-		reader: newReader(reader),
-	}
-	for _, t := range tmps {
-		decoder.repo[t.ID] = t
-	}
-	return decoder
 }
 
 func (d *Decoder) visitPMap() {

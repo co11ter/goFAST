@@ -8,8 +8,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sync"
 )
 
+// A Encoder encodes and writes data to io.Writer.
 type Encoder struct {
 	repo map[uint]*Template
 	storage storage
@@ -26,8 +28,10 @@ type Encoder struct {
 	target io.Writer
 
 	logWriter io.Writer
+	mu sync.Mutex
 }
 
+// NewEncoder returns a new encoder that writes FAST-encoded message to writer.
 func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 	encoder := &Encoder{
 		repo: make(map[uint]*Template),
@@ -43,12 +47,20 @@ func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 	return encoder
 }
 
+// SetLog sets writer for logging
 func (e *Encoder) SetLog(writer io.Writer) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	e.logWriter = writer
 	e.writer = newWriter(newLogger(writer))
 }
 
+// Encode encodes msg struct to writer
 func (e *Encoder) Encode(msg interface{}) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	e.log("// ----- new message start ----- //\n")
 	m := newMsg(msg)
 	e.tid = m.LookUpTID()
