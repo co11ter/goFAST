@@ -11,8 +11,14 @@ const (
 
 type Decoder struct {
 	repo map[uint]*Template
-	visitor *Visitor
-	tid uint
+	storage storage
+
+	tid uint // template id
+
+	prev *PMap
+	current *PMap
+
+	reader *Reader
 
 	logWriter io.Writer
 }
@@ -20,12 +26,41 @@ type Decoder struct {
 func NewDecoder(reader io.ByteReader, tmps ...*Template) *Decoder {
 	decoder := &Decoder{
 		repo: make(map[uint]*Template),
-		visitor: newVisitor(reader),
+		storage: newStorage(),
+		reader: NewReader(reader),
 	}
 	for _, t := range tmps {
 		decoder.repo[t.ID] = t
 	}
 	return decoder
+}
+
+func (d *Decoder) visitPMap() {
+	var err error
+	if d.current == nil {
+		d.current, err = d.reader.ReadPMap()
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		tmp := *d.current
+		d.current, err = d.reader.ReadPMap()
+		if err != nil {
+			panic(err)
+		}
+		d.prev = &tmp
+	}
+}
+
+func (d *Decoder) visitTemplateID() uint {
+	if d.current.IsNextBitSet() {
+		tmp, err := d.reader.ReadUint32(false)
+		if err != nil {
+			panic(err)
+		}
+		return uint(*tmp)
+	}
+	return 0
 }
 
 func (d *Decoder) SetLog(writer io.Writer) {
@@ -35,11 +70,11 @@ func (d *Decoder) SetLog(writer io.Writer) {
 func (d *Decoder) Decode(msg interface{}) error {
 	d.log("// ----- new message start ----- //\n")
 	d.log("pmap parsing: ")
-	d.visitor.visitPMap()
-	d.log("\n  pmap = ", *d.visitor.current, "\n")
+	d.visitPMap()
+	d.log("\n  pmap = ", *d.current, "\n")
 
 	d.log("template parsing: ")
-	d.tid = d.visitor.visitTemplateID()
+	d.tid = d.visitTemplateID()
 	d.log("\n  template = ", d.tid, "\n")
 
 	tpl, ok := d.repo[d.tid]
@@ -58,7 +93,7 @@ func (d *Decoder) Decode(msg interface{}) error {
 func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 	d.log("sequence start: ")
 
-	tmp, err := d.visitor.visit(instructions[0])
+	tmp, err := instructions[0].extract(d.reader, d.storage, d.current)
 	if err != nil {
 		panic(err)
 	}
@@ -68,8 +103,8 @@ func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 	for i:=0; i<length; i++ {
 		d.log("sequence elem[", i, "] start: \n")
 		d.log("pmap parsing: ")
-		d.visitor.visitPMap()
-		d.log("\n  pmap = ", *d.visitor.current, "\n")
+		d.visitPMap()
+		d.log("\n  pmap = ", *d.current, "\n")
 		for _, instruction := range instructions[1:] {
 
 			d.log("  parsing: ", instruction.Name, " ")
@@ -78,7 +113,7 @@ func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 				Name: instruction.Name,
 				TemplateID: d.tid,
 			}
-			field.Value, err = d.visitor.visit(instruction)
+			field.Value, err = instruction.extract(d.reader, d.storage, d.current)
 			if err != nil {
 				panic(err)
 			}
@@ -100,7 +135,7 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 				Name: instruction.Name,
 				TemplateID: d.tid,
 			}
-			field.Value, err = d.visitor.visit(instruction)
+			field.Value, err = instruction.extract(d.reader, d.storage, d.current)
 			if err != nil {
 				panic(err)
 			}
