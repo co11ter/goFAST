@@ -16,8 +16,8 @@ type Encoder struct {
 
 	tid uint // template id
 
-	prev *PMap
-	current *PMap
+	prev *pMap
+	current *pMap
 
 	tmp *bytes.Buffer
 	chunk *bytes.Buffer
@@ -41,6 +41,31 @@ func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 	}
 	encoder.setBuffer(&bytes.Buffer{})
 	return encoder
+}
+
+func (e *Encoder) SetLog(writer io.Writer) {
+	e.logWriter = writer
+	e.setBuffer(newLogger(writer))
+}
+
+func (e *Encoder) Encode(msg interface{}) error {
+	e.log("// ----- new message start ----- //\n")
+	m := newMsg(msg)
+	e.tid = m.LookUpTID()
+
+	tpl, ok := e.repo[e.tid]
+	if !ok {
+		return nil
+	}
+
+	e.acceptPMap()
+	e.log("template = ", e.tid)
+	e.log("\n  encoding -> ")
+	e.acceptTemplateID(uint32(e.tid))
+
+	e.encodeSegment(tpl.Instructions, m)
+
+	return nil
 }
 
 func (e *Encoder) setBuffer(buf buffer) {
@@ -75,10 +100,10 @@ func (e *Encoder) commit() error {
 
 func (e *Encoder) acceptPMap() {
 	if e.current == nil {
-		e.current = &PMap{mask: 128}
+		e.current = &pMap{mask: 128}
 	} else {
 		tmp := *e.current
-		e.current = &PMap{mask: 128}
+		e.current = &pMap{mask: 128}
 		e.prev = &tmp
 	}
 }
@@ -88,52 +113,27 @@ func (e *Encoder) acceptTemplateID(id uint32) {
 	e.writer.WriteUint32(false, id)
 }
 
-func (e *Encoder) SetLog(writer io.Writer) {
-	e.logWriter = writer
-	e.setBuffer(newLogger(writer))
-}
-
-func (e *Encoder) Encode(msg interface{}) error {
-	e.log("// ----- new message start ----- //\n")
-	m := newMsg(msg)
-	e.tid = m.LookUpTID()
-
-	tpl, ok := e.repo[e.tid]
-	if !ok {
-		return nil
-	}
-
-	e.acceptPMap()
-	e.log("template = ", e.tid)
-	e.log("\n  encoding -> ")
-	e.acceptTemplateID(uint32(e.tid))
-
-	e.encodeSegment(tpl.Instructions, m)
-
-	return nil
-}
-
 func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 	for _, instruction := range instructions {
 		if instruction.Type == TypeSequence {
-			field := &Field{
-				ID: instruction.ID,
-				Name: instruction.Name,
-				TemplateID: e.tid,
+			field := &field{
+				id: instruction.ID,
+				name: instruction.Name,
+				templateID: e.tid,
 			}
 			msg.LookUpLen(field)
-			e.encodeSequence(instruction.Instructions, msg, field.Value.(int))
+			e.encodeSequence(instruction.Instructions, msg, field.value.(int))
 		} else {
-			field := &Field{
-				ID: instruction.ID,
-				Name: instruction.Name,
-				TemplateID: e.tid,
+			field := &field{
+				id: instruction.ID,
+				name: instruction.Name,
+				templateID: e.tid,
 			}
 
 			msg.LookUp(field)
-			e.log("\n", instruction.Name, " = ", field.Value, "\n")
+			e.log("\n", instruction.Name, " = ", field.value, "\n")
 			e.log("  encoding -> ")
-			instruction.inject(e.writer, e.storage, e.current, field.Value)
+			instruction.inject(e.writer, e.storage, e.current, field.value)
 		}
 	}
 	e.log("\npmap = ", e.current, "\n")
@@ -155,16 +155,16 @@ func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message, leng
 		e.log("\n  sequence elem[", i, "] start: ")
 		e.acceptPMap()
 		for _, instruction := range instructions[1:] {
-			field := &Field{
-				ID: instruction.ID,
-				Name: instruction.Name,
-				TemplateID: e.tid,
+			field := &field{
+				id: instruction.ID,
+				name: instruction.Name,
+				templateID: e.tid,
 			}
 
 			msg.LookUpSlice(field, i)
-			e.log("\n    ", instruction.Name, " = ", field.Value, "\n")
+			e.log("\n    ", instruction.Name, " = ", field.value, "\n")
 			e.log("      encoding -> ")
-			instruction.inject(e.writer, e.storage, e.current, field.Value)
+			instruction.inject(e.writer, e.storage, e.current, field.value)
 		}
 
 		e.log("\n  pmap = ", e.current, "\n")

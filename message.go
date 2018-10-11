@@ -33,7 +33,7 @@ func newMsg(msg interface{}) *message {
 	return m
 }
 
-func (m *message) LookUp(field *Field) {
+func (m *message) LookUp(field *field) {
 	path := m.lookUpPath(field)
 	if len(path) == 0 {
 		return
@@ -41,23 +41,23 @@ func (m *message) LookUp(field *Field) {
 
 	if rField := reflect.ValueOf(m.msg).Elem().Field(path[0]); rField.Kind() == reflect.Ptr {
 		if !rField.IsNil() {
-			field.Value = rField.Elem().Interface()
+			field.value = rField.Elem().Interface()
 		}
 	} else {
-		field.Value = rField.Interface()
+		field.value = rField.Interface()
 	}
 }
 
-func (m *message) LookUpLen(field *Field) {
+func (m *message) LookUpLen(field *field) {
 	path := m.lookUpPath(field)
 	if len(path) == 0 {
 		return
 	}
 
-	field.Value = reflect.ValueOf(m.msg).Elem().Field(path[0]).Len()
+	field.value = reflect.ValueOf(m.msg).Elem().Field(path[0]).Len()
 }
 
-func (m *message) LookUpSlice(field *Field, index int) {
+func (m *message) LookUpSlice(field *field, index int) {
 	path := m.lookUpPath(field)
 	if len(path) < 2 {
 		return
@@ -66,10 +66,10 @@ func (m *message) LookUpSlice(field *Field, index int) {
 	rField := reflect.ValueOf(m.msg).Elem().Field(path[0]).Index(index).Field(path[1])
 	if rField.Kind() == reflect.Ptr {
 		if !rField.IsNil() {
-			field.Value = rField.Elem().Interface()
+			field.value = rField.Elem().Interface()
 		}
 	} else {
-		field.Value = rField.Interface()
+		field.value = rField.Interface()
 	}
 }
 
@@ -95,8 +95,8 @@ func (m *message) assignTID(tid uint) {
 	}
 }
 
-func (m *message) Assign(field *Field) {
-	if field.Value == nil {
+func (m *message) Assign(field *field) {
+	if field.value == nil {
 		return
 	}
 
@@ -107,14 +107,14 @@ func (m *message) Assign(field *Field) {
 
 	if rField := reflect.ValueOf(m.msg).Elem().Field(path[0]); rField.Kind() == reflect.Ptr {
 		rField.Set(reflect.New(rField.Type().Elem()))
-		rField.Elem().Set(reflect.ValueOf(field.Value))
+		rField.Elem().Set(reflect.ValueOf(field.value))
 	} else {
-		rField.Set(reflect.ValueOf(field.Value))
+		rField.Set(reflect.ValueOf(field.value))
 	}
 }
 
-func (m *message) AssignSlice(field *Field, index int) {
-	if field.Value == nil {
+func (m *message) AssignSlice(field *field, index int) {
+	if field.value == nil {
 		return
 	}
 
@@ -140,15 +140,15 @@ func (m *message) AssignSlice(field *Field, index int) {
 
 	if rField := value.Index(index).Field(path[1]); rField.Kind() == reflect.Ptr {
 		rField.Set(reflect.New(rField.Type().Elem()))
-		rField.Elem().Set(reflect.ValueOf(field.Value))
+		rField.Elem().Set(reflect.ValueOf(field.value))
 	} else {
-		rField.Set(reflect.ValueOf(field.Value))
+		rField.Set(reflect.ValueOf(field.value))
 	}
 }
 
-func (m *message) lookUpPath(field *Field) []int {
-	name := strconv.Itoa(int(field.ID))
-	tid  := strconv.Itoa(int(field.TemplateID))
+func (m *message) lookUpPath(field *field) []int {
+	name := strconv.Itoa(int(field.id))
+	tid  := strconv.Itoa(int(field.templateID))
 	if v, ok := m.tagMap[name + "," + tid]; ok {
 		return v
 	}
@@ -157,11 +157,11 @@ func (m *message) lookUpPath(field *Field) []int {
 		return v
 	}
 
-	if v, ok := m.tagMap[field.Name + "," + tid]; ok {
+	if v, ok := m.tagMap[field.name + "," + tid]; ok {
 		return v
 	}
 
-	if v, ok := m.tagMap[field.Name]; ok {
+	if v, ok := m.tagMap[field.name]; ok {
 		return v
 	}
 

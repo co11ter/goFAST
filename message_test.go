@@ -45,23 +45,23 @@ func TestMessage_Assign(t *testing.T) {
 	var msg Msg
 	m := newMsg(&msg)
 
-	field := &Field{
-		ID: 11,
-		Value: uint32(1),
+	fld := &field{
+		id: 11,
+		value: uint32(1),
 	}
 
-	m.Assign(field)
+	m.Assign(fld)
 
 	if msg.Test != uint32(1) {
 		t.Fatal("invalid assigning to 'msg.Test' field")
 	}
 
-	field = &Field{
-		ID: 33,
-		Value: uint32(2),
+	fld = &field{
+		id: 33,
+		value: uint32(2),
 	}
 
-	m.AssignSlice(field, 0)
+	m.AssignSlice(fld, 0)
 
 	if len(msg.Seq) !=1 || msg.Seq[0].Test != uint32(2) {
 		t.Fatal("invalid assigning to 'msg.Seq[0].Test' field")

@@ -31,7 +31,7 @@ func (i *Instruction) isNullable() bool {
 	return i.isOptional() && (i.Opt != OptConstant)
 }
 
-func (i *Instruction) inject(writer *Writer, s storage, pmap *PMap, value interface{}) (err error) {
+func (i *Instruction) inject(writer *Writer, s storage, pmap *pMap, value interface{}) (err error) {
 	switch i.Opt {
 	case OptNone:
 		err = i.write(writer, value)
@@ -111,7 +111,7 @@ func (i *Instruction) write(writer *Writer, value interface{}) (err error) {
 	return
 }
 
-func (i *Instruction) extract(reader *Reader, s storage, pmap *PMap) (result interface{}, err error) {
+func (i *Instruction) extract(reader *Reader, s storage, pmap *pMap) (result interface{}, err error) {
 
 	// TODO need refactor
 	if i.Type == TypeDecimal {
@@ -225,7 +225,7 @@ func (i *Instruction) read(reader *Reader) (result interface{}, err error) {
 	return result, err
 }
 
-func (i *Instruction) extractDecimal(reader *Reader, s storage, pmap *PMap) (interface{}, error) {
+func (i *Instruction) extractDecimal(reader *Reader, s storage, pmap *pMap) (interface{}, error) {
 	var mantissa int64
 	var exponent int32
 	for _, in := range i.Instructions {

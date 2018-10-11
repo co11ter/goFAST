@@ -32,7 +32,7 @@ func (w *Writer) Bytes() []byte {
 	return b
 }
 
-func (w *Writer) WritePMap(m *PMap) error {
+func (w *Writer) WritePMap(m *pMap) error {
 	_, err := w.tmpBuf.Write(w.buf.Bytes())
 	w.buf.Reset()
 	if err != nil {

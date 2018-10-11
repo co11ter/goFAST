@@ -20,8 +20,8 @@ func NewReader(reader io.ByteReader) *Reader {
 	return &Reader{reader, bytes.Buffer{}, 0x00}
 }
 
-func (r *Reader) ReadPMap() (m *PMap, err error) {
-	m = new(PMap)
+func (r *Reader) ReadPMap() (m *pMap, err error) {
+	m = new(pMap)
 	m.mask = 1;
 	for i:=0; i < maxLoadBytes; i++ {
 		r.last, err = r.reader.ReadByte()

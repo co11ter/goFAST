@@ -19,12 +19,39 @@ type Decoder struct {
 
 	tid uint // template id
 
-	prev *PMap
-	current *PMap
+	prev *pMap
+	current *pMap
 
 	reader *Reader
 
 	logWriter io.Writer
+}
+
+func (d *Decoder) SetLog(writer io.Writer) {
+	d.logWriter = writer
+}
+
+func (d *Decoder) Decode(msg interface{}) error {
+	d.log("// ----- new message start ----- //\n")
+	d.log("pmap parsing: ")
+	d.visitPMap()
+	d.log("\n  pmap = ", *d.current, "\n")
+
+	d.log("template parsing: ")
+	d.tid = d.visitTemplateID()
+	d.log("\n  template = ", d.tid, "\n")
+
+	tpl, ok := d.repo[d.tid]
+	if !ok {
+		return nil
+	}
+
+	m := newMsg(msg)
+	m.assignTID(d.tid)
+	d.decodeSegment(tpl.Instructions, m)
+	d.tid = 0
+
+	return nil
 }
 
 func NewDecoder(reader io.ByteReader, tmps ...*Template) *Decoder {
@@ -67,33 +94,6 @@ func (d *Decoder) visitTemplateID() uint {
 	return 0
 }
 
-func (d *Decoder) SetLog(writer io.Writer) {
-	d.logWriter = writer
-}
-
-func (d *Decoder) Decode(msg interface{}) error {
-	d.log("// ----- new message start ----- //\n")
-	d.log("pmap parsing: ")
-	d.visitPMap()
-	d.log("\n  pmap = ", *d.current, "\n")
-
-	d.log("template parsing: ")
-	d.tid = d.visitTemplateID()
-	d.log("\n  template = ", d.tid, "\n")
-
-	tpl, ok := d.repo[d.tid]
-	if !ok {
-		return nil
-	}
-
-	m := newMsg(msg)
-	m.assignTID(d.tid)
-	d.decodeSegment(tpl.Instructions, m)
-	d.tid = 0
-
-	return nil
-}
-
 func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 	d.log("sequence start: ")
 
@@ -112,16 +112,16 @@ func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
 		for _, instruction := range instructions[1:] {
 
 			d.log("  parsing: ", instruction.Name, " ")
-			field := &Field{
-				ID: instruction.ID,
-				Name: instruction.Name,
-				TemplateID: d.tid,
+			field := &field{
+				id: instruction.ID,
+				name: instruction.Name,
+				templateID: d.tid,
 			}
-			field.Value, err = instruction.extract(d.reader, d.storage, d.current)
+			field.value, err = instruction.extract(d.reader, d.storage, d.current)
 			if err != nil {
 				panic(err)
 			}
-			d.log("\n    ", field.Name, " = ", field.Value, "\n")
+			d.log("\n    ", field.name, " = ", field.value, "\n")
 			msg.AssignSlice(field, i)
 		}
 	}
@@ -134,16 +134,16 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 			d.decodeSequence(instruction.Instructions, msg)
 		} else {
 			d.log("parsing: ", instruction.Name, " ")
-			field := &Field{
-				ID: instruction.ID,
-				Name: instruction.Name,
-				TemplateID: d.tid,
+			field := &field{
+				id: instruction.ID,
+				name: instruction.Name,
+				templateID: d.tid,
 			}
-			field.Value, err = instruction.extract(d.reader, d.storage, d.current)
+			field.value, err = instruction.extract(d.reader, d.storage, d.current)
 			if err != nil {
 				panic(err)
 			}
-			d.log("\n  ", field.Name, " = ", field.Value, "\n")
+			d.log("\n  ", field.name, " = ", field.value, "\n")
 			msg.Assign(field)
 		}
 	}
