@@ -8,8 +8,18 @@ import (
 
 type Encoder struct {
 	repo map[uint]*Template
-	acceptor *Acceptor
-	tid uint
+	storage storage
+
+	tid uint // template id
+
+	prev *PMap
+	current *PMap
+
+	tmp *bytes.Buffer
+	chunk *bytes.Buffer
+	writer *Writer
+
+	target io.Writer
 
 	logWriter io.Writer
 }
@@ -17,18 +27,66 @@ type Encoder struct {
 func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 	encoder := &Encoder{
 		repo: make(map[uint]*Template),
-		acceptor: newAcceptor(writer),
+		storage: make(map[string]interface{}),
+		chunk: &bytes.Buffer{},
+		tmp: &bytes.Buffer{},
+		target: writer,
 	}
 	for _, t := range tmps {
 		encoder.repo[t.ID] = t
 	}
-	encoder.acceptor.setBuffer(&bytes.Buffer{})
+	encoder.setBuffer(&bytes.Buffer{})
 	return encoder
+}
+
+func (e *Encoder) setBuffer(buf buffer) {
+	e.writer = NewWriter(buf)
+}
+
+func (e *Encoder) writePMap() {
+	e.writer.WritePMap(e.current)
+}
+
+func (e *Encoder) writeTmp() {
+	e.tmp.Write(e.writer.Bytes())
+}
+
+func (e *Encoder) writeChunk() {
+	e.chunk.Write(e.writer.Bytes())
+	if e.prev != nil {
+		e.current = e.prev
+		e.prev = nil
+	}
+}
+
+func (e *Encoder) commit() error {
+	e.current = nil
+	e.prev = nil
+	tmp := append(e.writer.Bytes(), e.tmp.Bytes()...)
+	tmp = append(tmp, e.chunk.Bytes()...)
+	_, err := e.target.Write(tmp)
+	e.chunk.Reset()
+	return err
+}
+
+func (e *Encoder) acceptPMap() {
+	if e.current == nil {
+		e.current = &PMap{mask: 128}
+	} else {
+		tmp := *e.current
+		e.current = &PMap{mask: 128}
+		e.prev = &tmp
+	}
+}
+
+func (e *Encoder) acceptTemplateID(id uint32) {
+	e.current.SetNextBit(true)
+	e.writer.WriteUint32(false, id)
 }
 
 func (e *Encoder) SetLog(writer io.Writer) {
 	e.logWriter = writer
-	e.acceptor.setBuffer(newLogger(writer))
+	e.setBuffer(newLogger(writer))
 }
 
 func (e *Encoder) Encode(msg interface{}) error {
@@ -41,10 +99,10 @@ func (e *Encoder) Encode(msg interface{}) error {
 		return nil
 	}
 
-	e.acceptor.acceptPMap()
+	e.acceptPMap()
 	e.log("template = ", e.tid)
 	e.log("\n  encoding -> ")
-	e.acceptor.acceptTemplateID(uint32(e.tid))
+	e.acceptTemplateID(uint32(e.tid))
 
 	e.encodeSegment(tpl.Instructions, m)
 
@@ -71,14 +129,14 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 			msg.LookUp(field)
 			e.log("\n", instruction.Name, " = ", field.Value, "\n")
 			e.log("  encoding -> ")
-			e.acceptor.accept(instruction, field.Value)
+			instruction.inject(e.writer, e.storage, e.current, field.Value)
 		}
 	}
-	e.log("\npmap = ", e.acceptor.current, "\n")
+	e.log("\npmap = ", e.current, "\n")
 	e.log("  encoding -> ")
-	e.acceptor.writePMap()
+	e.writePMap()
 	e.log("\n")
-	e.acceptor.commit()
+	e.commit()
 	e.log("\n")
 }
 
@@ -86,12 +144,12 @@ func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message, leng
 	e.log("\nsequence start: ")
 	e.log("\n  length = ", length, "\n")
 	e.log("    encoding -> ")
-	e.acceptor.accept(instructions[0], uint32(length))
+	instructions[0].inject(e.writer, e.storage, e.current, uint32(length))
 
-	e.acceptor.writeTmp()
+	e.writeTmp()
 	for i:=0; i<length; i++ {
 		e.log("\n  sequence elem[", i, "] start: ")
-		e.acceptor.acceptPMap()
+		e.acceptPMap()
 		for _, instruction := range instructions[1:] {
 			field := &Field{
 				ID: instruction.ID,
@@ -102,13 +160,13 @@ func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message, leng
 			msg.LookUpSlice(field, i)
 			e.log("\n    ", instruction.Name, " = ", field.Value, "\n")
 			e.log("      encoding -> ")
-			e.acceptor.accept(instruction, field.Value)
+			instruction.inject(e.writer, e.storage, e.current, field.Value)
 		}
 
-		e.log("\n  pmap = ", e.acceptor.current, "\n")
+		e.log("\n  pmap = ", e.current, "\n")
 		e.log("    encoding -> ")
-		e.acceptor.writePMap()
-		e.acceptor.writeChunk()
+		e.writePMap()
+		e.writeChunk()
 	}
 }
 
