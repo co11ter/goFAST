@@ -31,7 +31,7 @@ func (i *Instruction) isNullable() bool {
 	return i.isOptional() && (i.Opt != OptConstant)
 }
 
-func (i *Instruction) inject(writer *Writer, s storage, pmap *pMap, value interface{}) (err error) {
+func (i *Instruction) inject(writer *writer, s storage, pmap *pMap, value interface{}) (err error) {
 	switch i.Opt {
 	case OptNone:
 		err = i.write(writer, value)
@@ -90,7 +90,7 @@ func (i *Instruction) inject(writer *Writer, s storage, pmap *pMap, value interf
 	return err
 }
 
-func (i *Instruction) write(writer *Writer, value interface{}) (err error) {
+func (i *Instruction) write(writer *writer, value interface{}) (err error) {
 	if value == nil {
 		err = writer.WriteNil()
 		return

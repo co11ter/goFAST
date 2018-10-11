@@ -21,7 +21,7 @@ type Encoder struct {
 
 	tmp *bytes.Buffer
 	chunk *bytes.Buffer
-	writer *Writer
+	writer *writer
 
 	target io.Writer
 
@@ -34,18 +34,18 @@ func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 		storage: make(map[string]interface{}),
 		chunk: &bytes.Buffer{},
 		tmp: &bytes.Buffer{},
+		writer: newWriter(&bytes.Buffer{}),
 		target: writer,
 	}
 	for _, t := range tmps {
 		encoder.repo[t.ID] = t
 	}
-	encoder.setBuffer(&bytes.Buffer{})
 	return encoder
 }
 
 func (e *Encoder) SetLog(writer io.Writer) {
 	e.logWriter = writer
-	e.setBuffer(newLogger(writer))
+	e.writer = newWriter(newLogger(writer))
 }
 
 func (e *Encoder) Encode(msg interface{}) error {
@@ -66,10 +66,6 @@ func (e *Encoder) Encode(msg interface{}) error {
 	e.encodeSegment(tpl.Instructions, m)
 
 	return nil
-}
-
-func (e *Encoder) setBuffer(buf buffer) {
-	e.writer = NewWriter(buf)
 }
 
 func (e *Encoder) writePMap() {

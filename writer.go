@@ -15,24 +15,24 @@ type buffer interface {
 	Reset()
 }
 
-type Writer struct {
+type writer struct {
 	buf buffer
 	strBuf bytes.Buffer
 	tmpBuf bytes.Buffer
 }
 
-func NewWriter(buf buffer) *Writer {
-	return &Writer{buf: buf}
+func newWriter(buf buffer) *writer {
+	return &writer{buf: buf}
 }
 
-func (w *Writer) Bytes() []byte {
+func (w *writer) Bytes() []byte {
 	b := append(w.buf.Bytes(), w.tmpBuf.Bytes()...)
 	w.buf.Reset()
 	w.tmpBuf.Reset()
 	return b
 }
 
-func (w *Writer) WritePMap(m *pMap) error {
+func (w *writer) WritePMap(m *pMap) error {
 	_, err := w.tmpBuf.Write(w.buf.Bytes())
 	w.buf.Reset()
 	if err != nil {
@@ -57,7 +57,7 @@ func (w *Writer) WritePMap(m *pMap) error {
 	return err
 }
 
-func (w *Writer) WriteUint32(nullable bool, value uint32) error {
+func (w *writer) WriteUint32(nullable bool, value uint32) error {
 	if !nullable && value == 0 {
 		w.buf.Write([]byte{0x80})
 		return nil
@@ -81,7 +81,7 @@ func (w *Writer) WriteUint32(nullable bool, value uint32) error {
 	return nil
 }
 
-func (w *Writer) WriteUint64(nullable bool, value uint64) error {
+func (w *writer) WriteUint64(nullable bool, value uint64) error {
 	if !nullable && value == 0 {
 		w.buf.Write([]byte{0x80})
 		return nil
@@ -105,7 +105,7 @@ func (w *Writer) WriteUint64(nullable bool, value uint64) error {
 	return nil
 }
 
-func (w *Writer) WriteInt32(nullable bool, value int32) error {
+func (w *writer) WriteInt32(nullable bool, value int32) error {
 	if !nullable && value == 0 {
 		w.buf.Write([]byte{0x80})
 		return nil
@@ -147,7 +147,7 @@ func (w *Writer) WriteInt32(nullable bool, value int32) error {
 	return nil
 }
 
-func (w *Writer) WriteInt64(nullable bool, value int64) error {
+func (w *writer) WriteInt64(nullable bool, value int64) error {
 	if !nullable && value == 0 {
 		w.buf.Write([]byte{0x80})
 		return nil
@@ -190,11 +190,11 @@ func (w *Writer) WriteInt64(nullable bool, value int64) error {
 }
 
 // TODO
-func (w *Writer) WriteUtfString(nullable bool, value string) error {
+func (w *writer) WriteUtfString(nullable bool, value string) error {
 	return nil
 }
 
-func (w *Writer) WriteAsciiString(nullable bool, value string) error {
+func (w *writer) WriteAsciiString(nullable bool, value string) error {
 	if len(value) == 0 {
 		if nullable {
 			w.buf.Write([]byte{0x00})
@@ -220,7 +220,7 @@ func (w *Writer) WriteAsciiString(nullable bool, value string) error {
 	return nil
 }
 
-func (w *Writer) WriteNil() error {
+func (w *writer) WriteNil() error {
 	w.buf.Write([]byte{0x80})
 	return nil
 }
