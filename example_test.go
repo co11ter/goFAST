@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var xmlData = `
+const xmlData = `
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
 	<template name="Done" id="1" xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
