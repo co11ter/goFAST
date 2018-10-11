@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*
-	A FAST (FIX Adapted for STreaming) encoder/decoder. Under development! Library is not recommended for production.
+Package fast implements FAST (FIX Adapted for STreaming) encoder/decoder.
+Under development! Library is not recommended for production.
 */
 package fast

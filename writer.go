@@ -190,11 +190,11 @@ func (w *writer) WriteInt64(nullable bool, value int64) error {
 }
 
 // TODO
-func (w *writer) WriteUtfString(nullable bool, value string) error {
+func (w *writer) WriteUnicodeString(nullable bool, value string) error {
 	return nil
 }
 
-func (w *writer) WriteAsciiString(nullable bool, value string) error {
+func (w *writer) WriteASCIIString(nullable bool, value string) error {
 	if len(value) == 0 {
 		if nullable {
 			w.buf.Write([]byte{0x00})

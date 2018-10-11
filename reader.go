@@ -170,11 +170,11 @@ func (r *reader) ReadUint64(nullable bool) (*uint64, error) {
 }
 
 // TODO
-func (r *reader) ReadUtfString(nullable bool) (*string, error) {
+func (r *reader) ReadUnicodeString(nullable bool) (*string, error) {
 	return nil, nil
 }
 
-func (r *reader) ReadAsciiString(nullable bool) (*string, error) {
+func (r *reader) ReadASCIIString(nullable bool) (*string, error) {
 	var err error
 	r.last, err = r.reader.ReadByte()
 	if err != nil {
@@ -187,9 +187,8 @@ func (r *reader) ReadAsciiString(nullable bool) (*string, error) {
 		if r.last == 0x80 {
 			if nullable {
 				return nil, nil
-			} else {
-				return &result, nil
 			}
+			return &result, nil
 		}
 
 		r.last, err = r.reader.ReadByte()

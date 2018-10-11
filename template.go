@@ -40,11 +40,17 @@ const (
 	valueOptional = "optional"
 )
 
+// InstructionType specifies the basic encoding of the field.
 type InstructionType int
+
+// InstructionOperator specifies ways to optimize the encoding of the field.
 type InstructionOperator int
+
+// InstructionPresence specifies presence of the field.
 type InstructionPresence int
 
 const (
+	// Type of instruction is null
 	TypeNull InstructionType = iota
 	TypeUint32
 	TypeInt32
@@ -69,6 +75,7 @@ const (
 	PresenceOptional
 )
 
+// Template collect instructions for this template
 type Template struct {
 	ID uint
 	Name string
@@ -79,11 +86,12 @@ type xmlParser struct {
 	decoder *xml.Decoder
 }
 
-func ParseXmlTemplate(reader io.Reader) []*Template {
-	return newXmlParser(reader).Parse()
+// ParseXMLTemplate reads xml data from reader and return templates collection.
+func ParseXMLTemplate(reader io.Reader) []*Template {
+	return newXMLParser(reader).Parse()
 }
 
-func newXmlParser(reader io.Reader) *xmlParser {
+func newXMLParser(reader io.Reader) *xmlParser {
 	return &xmlParser{decoder: xml.NewDecoder(reader)}
 }
 
