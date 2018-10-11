@@ -39,16 +39,16 @@ func (w *Writer) WritePMap(m *pMap) error {
 		return err
 	}
 
-	if m.value == 0 {
+	if m.bitmap == 0 {
 		_, err = w.buf.Write([]byte{0x80})
 		return err
 	}
 
 	b := make([]byte, 8)
 	i :=7
-	for i >= 0 && m.value != 0 {
-		b[i] = byte(m.value)
-		m.value >>= 7
+	for i >= 0 && m.bitmap != 0 {
+		b[i] = byte(m.bitmap)
+		m.bitmap >>= 7
 		i--
 	}
 	b[7] |= 0x80
