@@ -13,31 +13,31 @@ import (
 const (
 	tagTemplate = "template"
 
-	tagString = "string"
-	tagInt32 = "int32"
-	tagUint32 = "uInt32"
-	tagInt64 = "int64"
-	tagUint64 = "uInt64"
-	tagDecimal = "decimal"
+	tagString   = "string"
+	tagInt32    = "int32"
+	tagUint32   = "uInt32"
+	tagInt64    = "int64"
+	tagUint64   = "uInt64"
+	tagDecimal  = "decimal"
 	tagSequence = "sequence"
-	tagLength = "length"
+	tagLength   = "length"
 	tagExponent = "exponent"
 	tagMantissa = "mantissa"
 
 	tagIncrement = "increment"
-	tagConstant = "constant"
-	tagDefault = "default"
-	tagCopy = "copy"
-	tagDelta = "delta"
-	tagTail = "tail"
+	tagConstant  = "constant"
+	tagDefault   = "default"
+	tagCopy      = "copy"
+	tagDelta     = "delta"
+	tagTail      = "tail"
 
-	attrID = "id"
-	attrName = "name"
+	attrID       = "id"
+	attrName     = "name"
 	attrPresence = "presence"
-	attrValue = "value"
+	attrValue    = "value"
 
 	valueMandatory = "mandatory"
-	valueOptional = "optional"
+	valueOptional  = "optional"
 )
 
 // InstructionType specifies the basic encoding of the field.
@@ -50,7 +50,7 @@ type InstructionOperator int
 type InstructionPresence int
 
 const (
-	// Type of instruction is null
+	// TypeNull mark type of instruction null.
 	TypeNull InstructionType = iota
 	TypeUint32
 	TypeInt32
@@ -77,8 +77,8 @@ const (
 
 // Template collect instructions for this template
 type Template struct {
-	ID uint
-	Name string
+	ID           uint
+	Name         string
 	Instructions []*Instruction
 }
 
@@ -105,7 +105,7 @@ func (p *xmlParser) Parse() (templates []*Template) {
 			panic(err)
 		}
 
-		if start, ok := token.(xml.StartElement); ok && start.Name.Local == tagTemplate{
+		if start, ok := token.(xml.StartElement); ok && start.Name.Local == tagTemplate {
 			template := p.parseTemplate(&start)
 			templates = append(templates, template)
 		}
