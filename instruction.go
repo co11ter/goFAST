@@ -10,13 +10,13 @@ import (
 )
 
 type Instruction struct {
-	ID uint
-	Name string
-	Presence InstructionPresence
-	Type InstructionType
-	Opt InstructionOpt
+	ID           uint
+	Name         string
+	Presence     InstructionPresence
+	Type         InstructionType
+	Operator     InstructionOperator
 	Instructions []*Instruction
-	Value interface{}
+	Value        interface{}
 }
 
 func (i *Instruction) key() string {
@@ -28,23 +28,23 @@ func (i *Instruction) isOptional() bool {
 }
 
 func (i *Instruction) isNullable() bool {
-	return i.isOptional() && (i.Opt != OptConstant)
+	return i.isOptional() && (i.Operator != OperatorConstant)
 }
 
 func (i *Instruction) inject(writer *writer, s storage, pmap *pMap, value interface{}) (err error) {
-	switch i.Opt {
-	case OptNone:
+	switch i.Operator {
+	case OperatorNone:
 		err = i.write(writer, value)
 		if err != nil {
 			return
 		}
 		s.save(i.key(), value)
-	case OptConstant:
+	case OperatorConstant:
 		if i.isOptional() {
 			pmap.SetNextBit(value != nil)
 		}
 		s.save(i.key(), value)
-	case OptDefault:
+	case OperatorDefault:
 		if i.Value == value {
 			pmap.SetNextBit(false)
 			s.save(i.key(), value)
@@ -58,7 +58,7 @@ func (i *Instruction) inject(writer *writer, s storage, pmap *pMap, value interf
 		if value != nil {
 			s.save(i.key(), value)
 		}
-	case OptDelta:
+	case OperatorDelta:
 		if previous := s.load(i.key()); previous != nil {
 			value = delta(value, previous)
 		}
@@ -67,9 +67,9 @@ func (i *Instruction) inject(writer *writer, s storage, pmap *pMap, value interf
 			return
 		}
 		s.save(i.key(), value)
-	case OptTail:
+	case OperatorTail:
 		// TODO
-	case OptCopy, OptIncrement:
+	case OperatorCopy, OperatorIncrement:
 		previous := s.load(i.key())
 		s.save(i.key(), value)
 		if previous == nil {
@@ -118,14 +118,14 @@ func (i *Instruction) extract(reader *reader, s storage, pmap *pMap) (result int
 		return i.extractDecimal(reader, s, pmap)
 	}
 
-	switch i.Opt {
-	case OptNone:
+	switch i.Operator {
+	case OperatorNone:
 		result, err = i.read(reader)
 		if err != nil {
 			return nil, err
 		}
 		s.save(i.key(), result)
-	case OptConstant:
+	case OperatorConstant:
 		if i.isOptional() {
 			if pmap.IsNextBitSet() {
 				result = i.Value
@@ -134,14 +134,14 @@ func (i *Instruction) extract(reader *reader, s storage, pmap *pMap) (result int
 			result = i.Value
 		}
 		s.save(i.key(), result)
-	case OptDefault:
+	case OperatorDefault:
 		if pmap.IsNextBitSet() {
 			result, err = i.read(reader)
-		} else{
+		} else {
 			result = i.Value
 			s.save(i.key(), result)
 		}
-	case OptDelta:
+	case OperatorDelta:
 		result, err = i.read(reader)
 		if err != nil {
 			return nil, err
@@ -150,9 +150,9 @@ func (i *Instruction) extract(reader *reader, s storage, pmap *pMap) (result int
 			result = sum(result, previous)
 		}
 		s.save(i.key(), result)
-	case OptTail:
+	case OperatorTail:
 		// TODO
-	case OptCopy, OptIncrement:
+	case OperatorCopy, OperatorIncrement:
 		if pmap.IsNextBitSet() {
 			result, err = i.read(reader)
 			if err != nil {
@@ -167,7 +167,7 @@ func (i *Instruction) extract(reader *reader, s storage, pmap *pMap) (result int
 				// TODO what have to do on empty value
 
 				result = s.load(i.key())
-				if i.Opt == OptIncrement {
+				if i.Operator == OperatorIncrement {
 					result = increment(result)
 					s.save(i.key(), result)
 				}
@@ -185,7 +185,7 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 		if err != nil {
 			return result, err
 		}
-		if tmp != nil{
+		if tmp != nil {
 			result = *tmp
 		}
 	case TypeUint64:
@@ -193,7 +193,7 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 		if err != nil {
 			return result, err
 		}
-		if tmp != nil{
+		if tmp != nil {
 			result = *tmp
 		}
 	case TypeString:
@@ -201,7 +201,7 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 		if err != nil {
 			return result, err
 		}
-		if tmp != nil{
+		if tmp != nil {
 			result = *tmp
 		}
 	case TypeInt64, TypeMantissa:
@@ -209,7 +209,7 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 		if err != nil {
 			return result, err
 		}
-		if tmp != nil{
+		if tmp != nil {
 			result = *tmp
 		}
 	case TypeInt32, TypeExponent:
@@ -217,7 +217,7 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 		if err != nil {
 			return result, err
 		}
-		if tmp != nil{
+		if tmp != nil {
 			result = *tmp
 		}
 	}
@@ -276,13 +276,13 @@ func isEmpty(value interface{}) bool {
 func sum(values ...interface{}) (res interface{}) {
 	switch values[0].(type) {
 	case int64:
-		res = values[0].(int64)+int64(toInt(values[1]))
+		res = values[0].(int64) + int64(toInt(values[1]))
 	case int32:
-		res = values[0].(int32)+int32(toInt(values[1]))
+		res = values[0].(int32) + int32(toInt(values[1]))
 	case uint64:
-		res = values[0].(uint64)+uint64(toInt(values[1]))
+		res = values[0].(uint64) + uint64(toInt(values[1]))
 	case uint32:
-		res = values[0].(uint32)+uint32(toInt(values[1]))
+		res = values[0].(uint32) + uint32(toInt(values[1]))
 	}
 	return
 }
@@ -291,13 +291,13 @@ func sum(values ...interface{}) (res interface{}) {
 func delta(values ...interface{}) (res interface{}) {
 	switch values[0].(type) {
 	case int64:
-		res = values[0].(int64)-int64(toInt(values[1]))
+		res = values[0].(int64) - int64(toInt(values[1]))
 	case int32:
-		res = values[0].(int32)-int32(toInt(values[1]))
+		res = values[0].(int32) - int32(toInt(values[1]))
 	case uint64:
-		res = values[0].(uint64)-uint64(toInt(values[1]))
+		res = values[0].(uint64) - uint64(toInt(values[1]))
 	case uint32:
-		res = values[0].(uint32)-uint32(toInt(values[1]))
+		res = values[0].(uint32) - uint32(toInt(values[1]))
 	}
 	return
 }
@@ -323,4 +323,3 @@ func toInt(value interface{}) int {
 func increment(value interface{}) (res interface{}) {
 	return sum(value, 1)
 }
-

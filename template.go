@@ -41,7 +41,7 @@ const (
 )
 
 type InstructionType int
-type InstructionOpt int
+type InstructionOperator int
 type InstructionPresence int
 
 const (
@@ -57,13 +57,13 @@ const (
 	TypeExponent
 	TypeMantissa
 
-	OptNone InstructionOpt = iota
-	OptConstant
-	OptDelta
-	OptDefault
-	OptCopy
-	OptIncrement
-	OptTail
+	OperatorNone InstructionOperator = iota
+	OperatorConstant
+	OperatorDelta
+	OperatorDefault
+	OperatorCopy
+	OperatorIncrement
+	OperatorTail
 
 	PresenceMandatory InstructionPresence = iota
 	PresenceOptional
@@ -153,7 +153,7 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
 				}
 				instruction.Instructions = append(instruction.Instructions, inner)
 			} else {
-				instruction.Opt, instruction.Value = p.parseOperation(&start, instruction.Type)
+				instruction.Operator, instruction.Value = p.parseOperation(&start, instruction.Type)
 			}
 		}
 
@@ -165,18 +165,18 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
 	return instruction
 }
 
-func (p *xmlParser) parseOperation(token *xml.StartElement, typ InstructionType) (opt InstructionOpt, value interface{}) {
+func (p *xmlParser) parseOperation(token *xml.StartElement, typ InstructionType) (opt InstructionOperator, value interface{}) {
 	switch token.Name.Local {
 	case tagConstant:
-		opt = OptConstant
+		opt = OperatorConstant
 	case tagDefault:
-		opt = OptDefault
+		opt = OperatorDefault
 	case tagCopy:
-		opt = OptCopy
+		opt = OperatorCopy
 	case tagDelta:
-		opt = OptDelta
+		opt = OperatorDelta
 	case tagIncrement:
-		opt = OptIncrement
+		opt = OperatorIncrement
 	}
 
 	value = newValue(token, typ)
@@ -196,7 +196,7 @@ func (p *xmlParser) parseOperation(token *xml.StartElement, typ InstructionType)
 }
 
 func newInstruction(token *xml.StartElement) *Instruction {
-	instruction := &Instruction{Opt: OptNone}
+	instruction := &Instruction{Operator: OperatorNone}
 
 	switch token.Name.Local {
 	case tagString:
