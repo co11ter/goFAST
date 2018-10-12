@@ -69,7 +69,7 @@ func (d *Decoder) Decode(msg interface{}) error {
 
 	tpl, ok := d.repo[d.tid]
 	if !ok {
-		return nil
+		return ErrD9
 	}
 
 	m := newMsg(msg)

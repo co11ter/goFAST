@@ -66,7 +66,7 @@ func (e *Encoder) Encode(msg interface{}) error {
 
 	tpl, ok := e.repo[e.tid]
 	if !ok {
-		return nil
+		return ErrD9
 	}
 
 	e.acceptPMap()
