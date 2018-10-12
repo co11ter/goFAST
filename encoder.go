@@ -62,7 +62,7 @@ func (e *Encoder) Encode(msg interface{}) error {
 
 	e.log("// ----- new message start ----- //\n")
 	m := newMsg(msg)
-	e.tid = m.LookUpTID()
+	e.tid = m.GetTID()
 
 	tpl, ok := e.repo[e.tid]
 	if !ok {
@@ -128,8 +128,8 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 				name: instruction.Name,
 				templateID: e.tid,
 			}
-			msg.LookUpLen(field)
-			e.encodeSequence(instruction.Instructions, msg, field.value.(int))
+			msg.GetLen(field)
+			e.encodeSequence(instruction, msg, field.value.(int))
 		} else {
 			field := &field{
 				id: instruction.ID,
@@ -137,7 +137,7 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 				templateID: e.tid,
 			}
 
-			msg.LookUp(field)
+			msg.Get(field)
 			e.log("\n", instruction.Name, " = ", field.value, "\n")
 			e.log("  encoding -> ")
 			instruction.inject(e.writer, e.storage, e.current, field.value)
@@ -151,27 +151,35 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 	e.log("\n")
 }
 
-func (e *Encoder) encodeSequence(instructions []*Instruction, msg *message, length int) {
+func (e *Encoder) encodeSequence(instruction *Instruction, msg *message, length int) {
 	e.log("\nsequence start: ")
 	e.log("\n  length = ", length, "\n")
 	e.log("    encoding -> ")
-	instructions[0].inject(e.writer, e.storage, e.current, uint32(length))
+	instruction.Instructions[0].inject(e.writer, e.storage, e.current, uint32(length))
+
+	parent := &field{
+		id: instruction.ID,
+		name: instruction.Name,
+		templateID: e.tid,
+	}
 
 	e.writeTmp()
 	for i:=0; i<length; i++ {
 		e.log("\n  sequence elem[", i, "] start: ")
 		e.acceptPMap()
-		for _, instruction := range instructions[1:] {
+		for _, internal := range instruction.Instructions[1:] {
 			field := &field{
-				id: instruction.ID,
-				name: instruction.Name,
+				id: internal.ID,
+				name: internal.Name,
 				templateID: e.tid,
+				num: i,
+				parent: parent,
 			}
 
-			msg.LookUpSlice(field, i)
-			e.log("\n    ", instruction.Name, " = ", field.value, "\n")
+			msg.GetSlice(field)
+			e.log("\n    ", internal.Name, " = ", field.value, "\n")
 			e.log("      encoding -> ")
-			instruction.inject(e.writer, e.storage, e.current, field.value)
+			internal.inject(e.writer, e.storage, e.current, field.value)
 		}
 
 		e.log("\n  pmap = ", e.current, "\n")

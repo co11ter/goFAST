@@ -5,11 +5,11 @@
 package fast
 
 type field struct {
-	id uint // instruction id
-	name string
-	templateID uint
+	id         uint   // instruction id
+	name       string // instruction name
+	templateID uint   // template id
+	num        int    // slice index
+	parent     *field // parent field
 
 	value interface{}
 }
-
-

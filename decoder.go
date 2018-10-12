@@ -73,7 +73,7 @@ func (d *Decoder) Decode(msg interface{}) error {
 	}
 
 	m := newMsg(msg)
-	m.assignTID(d.tid)
+	m.SetTID(d.tid)
 	d.decodeSegment(tpl.Instructions, m)
 	d.tid = 0
 
@@ -108,35 +108,43 @@ func (d *Decoder) visitTemplateID() uint {
 	return 0
 }
 
-func (d *Decoder) decodeSequence(instructions []*Instruction, msg *message) {
+func (d *Decoder) decodeSequence(instruction *Instruction, msg *message) {
 	d.log("sequence start: ")
 
-	tmp, err := instructions[0].extract(d.reader, d.storage, d.current)
+	tmp, err := instruction.Instructions[0].extract(d.reader, d.storage, d.current)
 	if err != nil {
 		panic(err)
 	}
 	length := int(tmp.(uint32))
 	d.log("\n  length = ", length, "\n")
 
+	parent := &field{
+		id: instruction.ID,
+		name: instruction.Name,
+		templateID: d.tid,
+	}
+
 	for i:=0; i<length; i++ {
 		d.log("sequence elem[", i, "] start: \n")
 		d.log("pmap parsing: ")
 		d.visitPMap()
 		d.log("\n  pmap = ", *d.current, "\n")
-		for _, instruction := range instructions[1:] {
+		for _, internal := range instruction.Instructions[1:] {
 
-			d.log("  parsing: ", instruction.Name, " ")
+			d.log("  parsing: ", internal.Name, " ")
 			field := &field{
-				id: instruction.ID,
-				name: instruction.Name,
+				id: internal.ID,
+				name: internal.Name,
 				templateID: d.tid,
+				num: i,
+				parent: parent,
 			}
-			field.value, err = instruction.extract(d.reader, d.storage, d.current)
+			field.value, err = internal.extract(d.reader, d.storage, d.current)
 			if err != nil {
 				panic(err)
 			}
 			d.log("\n    ", field.name, " = ", field.value, "\n")
-			msg.AssignSlice(field, i)
+			msg.SetSlice(field)
 		}
 	}
 }
@@ -145,7 +153,7 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 	var err error
 	for _, instruction := range instructions {
 		if instruction.Type == TypeSequence {
-			d.decodeSequence(instruction.Instructions, msg)
+			d.decodeSequence(instruction, msg)
 		} else {
 			d.log("parsing: ", instruction.Name, " ")
 			field := &field{
@@ -158,7 +166,7 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 				panic(err)
 			}
 			d.log("\n  ", field.name, " = ", field.value, "\n")
-			msg.Assign(field)
+			msg.Set(field)
 		}
 	}
 }

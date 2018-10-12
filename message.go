@@ -13,7 +13,7 @@ import (
 const structTag = "fast"
 
 type message struct {
-	tagMap map[string][]int
+	tagMap map[string]int
 	msg    interface{}
 }
 
@@ -26,44 +26,58 @@ func newMsg(msg interface{}) *message {
 
 	rt := reflect.TypeOf(msg).Elem()
 
-	m := &message{tagMap: make(map[string][]int), msg: msg}
+	m := &message{tagMap: make(map[string]int), msg: msg}
 
-	parseType(rt, m.tagMap, nil)
+	parseType(rt, m.tagMap)
 
 	return m
 }
 
-func (m *message) LookUp(field *field) {
-	path := m.lookUpPath(field)
-	if len(path) == 0 {
+func (m *message) lookUpRField(field *field) (v reflect.Value, ok bool) {
+	index := m.lookUpIndex(field)
+	if index == nil {
 		return
 	}
 
-	if rField := reflect.ValueOf(m.msg).Elem().Field(path[0]); rField.Kind() == reflect.Ptr {
-		if !rField.IsNil() {
-			field.value = rField.Elem().Interface()
+	v = reflect.ValueOf(m.msg).Elem().Field(*index)
+	ok = true
+	return
+}
+
+// find value in message and assign to field
+func (m *message) Get(field *field) {
+	if rField, ok := m.lookUpRField(field); ok {
+		if rField.Kind() == reflect.Ptr {
+			if !rField.IsNil() {
+				field.value = rField.Elem().Interface()
+			}
+		} else {
+			field.value = rField.Interface()
 		}
-	} else {
-		field.value = rField.Interface()
 	}
 }
 
-func (m *message) LookUpLen(field *field) {
-	path := m.lookUpPath(field)
-	if len(path) == 0 {
-		return
+// find slice len in message and assign to field
+func (m *message) GetLen(field *field) {
+	if rField, ok := m.lookUpRField(field); ok {
+		field.value = rField.Len()
 	}
-
-	field.value = reflect.ValueOf(m.msg).Elem().Field(path[0]).Len()
 }
 
-func (m *message) LookUpSlice(field *field, index int) {
-	path := m.lookUpPath(field)
-	if len(path) < 2 {
+// find value in message and assign to field
+func (m *message) GetSlice(field *field) {
+	rField, ok := m.lookUpRField(field.parent)
+	if !ok {
 		return
 	}
 
-	rField := reflect.ValueOf(m.msg).Elem().Field(path[0]).Index(index).Field(path[1])
+	index := m.lookUpIndex(field)
+	if index == nil {
+		return
+	}
+
+	rField = rField.Index(field.num).Field(*index)
+
 	if rField.Kind() == reflect.Ptr {
 		if !rField.IsNil() {
 			field.value = rField.Elem().Interface()
@@ -73,102 +87,94 @@ func (m *message) LookUpSlice(field *field, index int) {
 	}
 }
 
-func (m *message) LookUpTID() uint {
-	path, ok := m.tagMap["*"]
+// find template id in message and return
+func (m *message) GetTID() uint {
+	index, ok := m.tagMap["*"]
 	if !ok {
 		return 0
 	}
-	return uint(reflect.ValueOf(m.msg).Elem().Field(path[0]).Uint())
+	return uint(reflect.ValueOf(m.msg).Elem().Field(index).Uint())
 }
 
-func (m *message) assignTID(tid uint) {
-	path, ok := m.tagMap["*"]
+// set template id to message
+func (m *message) SetTID(tid uint) {
+	index, ok := m.tagMap["*"]
 	if !ok {
 		return
 	}
 
-	if rField := reflect.ValueOf(m.msg).Elem().Field(path[0]); rField.Kind() == reflect.Ptr {
-		rField.Set(reflect.New(rField.Type().Elem()))
-		rField.Elem().Set(reflect.ValueOf(tid))
-	} else {
-		rField.Set(reflect.ValueOf(tid))
-	}
+	rField := reflect.ValueOf(m.msg).Elem().Field(index)
+	m.set(rField, reflect.ValueOf(tid))
 }
 
-func (m *message) Assign(field *field) {
+// set field value to message
+func (m *message) Set(field *field) {
 	if field.value == nil {
 		return
 	}
 
-	path := m.lookUpPath(field)
-	if len(path) == 0 {
-		return
-	}
-
-	if rField := reflect.ValueOf(m.msg).Elem().Field(path[0]); rField.Kind() == reflect.Ptr {
-		rField.Set(reflect.New(rField.Type().Elem()))
-		rField.Elem().Set(reflect.ValueOf(field.value))
-	} else {
-		rField.Set(reflect.ValueOf(field.value))
+	if rField, ok := m.lookUpRField(field); ok {
+		m.set(rField, reflect.ValueOf(field.value))
 	}
 }
 
-func (m *message) AssignSlice(field *field, index int) {
+func (m *message) SetSlice(field *field) {
 	if field.value == nil {
 		return
 	}
 
-	path := m.lookUpPath(field)
-	if len(path) < 2 {
+	rField, ok := m.lookUpRField(field.parent)
+	if !ok {
 		return
 	}
 
-	value := reflect.ValueOf(m.msg).Elem().Field(path[0])
-	if index >= value.Cap() {
-		newCap := value.Cap() + value.Cap()/2
+	if field.num >= rField.Cap() {
+		newCap := rField.Cap() + rField.Cap()/2
 		if newCap < 4 {
 			newCap = 4
 		}
-		newValue := reflect.MakeSlice(value.Type(), value.Len(), newCap)
-		reflect.Copy(newValue, value)
-		value.Set(newValue)
+		newValue := reflect.MakeSlice(rField.Type(), rField.Len(), newCap)
+		reflect.Copy(newValue, rField)
+		rField.Set(newValue)
 	}
 
-	if index >= value.Len() {
-		value.SetLen(index + 1)
+	if field.num >= rField.Len() {
+		rField.SetLen(field.num + 1)
 	}
 
-	if rField := value.Index(index).Field(path[1]); rField.Kind() == reflect.Ptr {
-		rField.Set(reflect.New(rField.Type().Elem()))
-		rField.Elem().Set(reflect.ValueOf(field.value))
-	} else {
-		rField.Set(reflect.ValueOf(field.value))
+	index := m.lookUpIndex(field)
+	if index == nil {
+		return
 	}
+
+	rField = rField.Index(field.num).Field(*index)
+	m.set(rField, reflect.ValueOf(field.value))
 }
 
-func (m *message) lookUpPath(field *field) []int {
-	name := strconv.Itoa(int(field.id))
-	tid  := strconv.Itoa(int(field.templateID))
-	if v, ok := m.tagMap[name + "," + tid]; ok {
-		return v
+func (m *message) set(field reflect.Value, value reflect.Value) {
+	if field.Kind() == reflect.Ptr {
+		field.Set(reflect.New(field.Type().Elem()))
+		field.Elem().Set(reflect.ValueOf(value))
+		return
 	}
+	field.Set(reflect.ValueOf(value))
+}
 
-	if v, ok := m.tagMap[name]; ok {
-		return v
-	}
+func (m *message) lookUpIndex(field *field) *int {
+	id := strconv.Itoa(int(field.id))
 
-	if v, ok := m.tagMap[field.name + "," + tid]; ok {
-		return v
+	if v, ok := m.tagMap[id]; ok {
+		return &v
 	}
 
 	if v, ok := m.tagMap[field.name]; ok {
-		return v
+		return &v
 	}
 
-	return []int{}
+	return nil
 }
 
-func parseType(rt reflect.Type, tagMap map[string][]int, index *int) {
+func parseType(rt reflect.Type, tagMap map[string]int) {
 
 	for i := 0; i < rt.NumField(); i++ {
 
@@ -179,18 +185,10 @@ func parseType(rt reflect.Type, tagMap map[string][]int, index *int) {
 			continue
 		}
 
-		if _, ok := tagMap[name]; !ok {
-			tagMap[name] = []int{}
-		}
-
-		if index != nil {
-			tagMap[name] = append(tagMap[name], *index)
-		}
-
-		tagMap[name] = append(tagMap[name], i)
+		tagMap[name] = i
 
 		if field.Type.Kind() == reflect.Slice {
-			parseType(field.Type.Elem(), tagMap, &i)
+			parseType(field.Type.Elem(), tagMap)
 		}
 	}
 }
