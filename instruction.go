@@ -5,7 +5,7 @@
 package fast
 
 import (
-	"math/big"
+	"math"
 	"strconv"
 )
 
@@ -114,8 +114,7 @@ func (i *Instruction) write(writer *writer, value interface{}) (err error) {
 
 func (i *Instruction) extract(reader *reader, s storage, pmap *pMap) (result interface{}, err error) {
 
-	// TODO need refactor
-	if i.Type == TypeDecimal {
+	if i.Type == TypeDecimal && len(i.Instructions) > 0 {
 		return i.extractDecimal(reader, s, pmap)
 	}
 
@@ -221,6 +220,18 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 		if tmp != nil {
 			result = *tmp
 		}
+	case TypeDecimal:
+		exponent, err := reader.ReadInt32(i.isNullable())
+		if err != nil {
+			return result, err
+		}
+		if exponent != nil {
+			mantissa, err := reader.ReadInt64(false)
+			if err != nil {
+				return result, err
+			}
+			result = math.Pow10(int(*exponent)) * float64(*mantissa)
+		}
 	}
 
 	return result, err
@@ -246,11 +257,7 @@ func (i *Instruction) extractDecimal(reader *reader, s storage, pmap *pMap) (int
 		}
 	}
 
-	result, _ := (&big.Float{}).SetMantExp(
-		(&big.Float{}).SetInt64(mantissa),
-		int(exponent),
-	).Float64()
-	return result, nil
+	return math.Pow10(int(exponent)) * float64(mantissa), nil
 }
 
 func isEmpty(value interface{}) bool {

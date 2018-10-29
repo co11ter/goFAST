@@ -136,6 +136,24 @@ func (p *xmlParser) parseTemplate(token *xml.StartElement) *Template {
 	return template
 }
 
+func (p *xmlParser) parseDecimalInstructionOrOperator(token *xml.StartElement, instruction *Instruction) {
+	inner := newInstruction(token)
+	if inner.Type != TypeNull {
+		inner = p.parseInstruction(token)
+		inner.ID = instruction.ID
+		inner.Name = instruction.Name
+
+		// If the decimal has optional presence, the exponent field is treated as on optional
+		//  integer field and the mantissa field is treated as a mandatory integer field.
+		if inner.Type == TypeExponent && instruction.Presence == PresenceOptional {
+			inner.Presence = instruction.Presence
+		}
+		instruction.Instructions = append(instruction.Instructions, inner)
+	} else {
+		instruction.Operator, instruction.Value = p.parseOperation(token, instruction.Type)
+	}
+}
+
 func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
 	instruction := newInstruction(token)
 
@@ -150,16 +168,7 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
 				inner := p.parseInstruction(&start)
 				instruction.Instructions = append(instruction.Instructions, inner)
 			} else if instruction.Type == TypeDecimal {
-				inner := p.parseInstruction(&start)
-				inner.ID = instruction.ID
-				inner.Name = instruction.Name
-
-				// If the decimal has optional presence, the exponent field is treated as on optional
-				//  integer field and the mantissa field is treated as a mandatory integer field.
-				if inner.Type == TypeExponent && instruction.Presence == PresenceOptional {
-					inner.Presence = instruction.Presence
-				}
-				instruction.Instructions = append(instruction.Instructions, inner)
+				p.parseDecimalInstructionOrOperator(&start, instruction)
 			} else {
 				instruction.Operator, instruction.Value = p.parseOperation(&start, instruction.Type)
 			}
@@ -185,6 +194,8 @@ func (p *xmlParser) parseOperation(token *xml.StartElement, typ InstructionType)
 		opt = OperatorDelta
 	case tagIncrement:
 		opt = OperatorIncrement
+	default:
+		opt = OperatorNone
 	}
 
 	value = newValue(token, typ)
@@ -227,6 +238,8 @@ func newInstruction(token *xml.StartElement) *Instruction {
 		instruction.Type = TypeExponent
 	case tagMantissa:
 		instruction.Type = TypeMantissa
+	default:
+		instruction.Type = TypeNull
 	}
 
 	for _, attr := range token.Attr {

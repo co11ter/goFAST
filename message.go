@@ -157,7 +157,7 @@ func (m *message) set(field reflect.Value, value reflect.Value) {
 		field.Elem().Set(reflect.ValueOf(value))
 		return
 	}
-	field.Set(reflect.ValueOf(value))
+	field.Set(value)
 }
 
 func (m *message) lookUpIndex(field *field) *int {
