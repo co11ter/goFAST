@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+    <template name="Done" id="1" xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+        <string name="Type" id="15">
+            <constant value="99"/>
+        </string>
+        <string name="TestStr" id="16" presence="optional"><tail/></string>
+        <string name="TestStr2" id="17" charset="unicode"/>
+        <sequence name="Sequence">
+            <length name="SeqLength" id="18"/>
+            <uInt64 name="SomeField" id="19"><increment/></uInt64>
+            <decimal name="CopyDecimal" id="20" presence="optional"><copy/></decimal>
+            <decimal name="MandatoryDecimal" id="271"/>
+            <sequence name="Internal" presence="optional">
+                <length name="VectorLength" id="149"/>
+                <decimal name="IndividualDecimal" id="272">
+                    <exponent>
+                        <default value="0"/>
+                    </exponent>
+                    <mantissa>
+                        <delta/>
+                    </mantissa>
+                </decimal>
+                <decimal name="IndividualDecimal2" id="451" presence="optional">
+                    <exponent>
+                        <default/>
+                    </exponent>
+                    <mantissa>
+                        <delta/>
+                    </mantissa>
+                </decimal>
+                <byteVector name="OptionalVector" id="5383" presence="optional"/>
+                <byteVector name="MandatoryVector" id="5383">
+                    <length name="VectorLength" id="146"/>
+                </byteVector>
+            </sequence>
+        </sequence>
+        <group name="Group">
+            <uInt32 name="Uint32" id="200" presence="optional"/>
+            <uInt64 name="Uint64" id="201"/>
+            <int32 name="Int32" id="202"/>
+            <int64 name="Int64" id="203" presence="optional"/>
+        </group>
+    </template>
+</templates>
