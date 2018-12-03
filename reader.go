@@ -71,7 +71,7 @@ func (r *reader) ReadInt32(nullable bool) (*int32, error) {
 	}
 
 	for (r.last & 0x80) == 0 {
-		result <<= 7;
+		result <<= 7
 		r.last, err = r.reader.ReadByte()
 		if err != nil {
 			return nil, err
@@ -80,7 +80,11 @@ func (r *reader) ReadInt32(nullable bool) (*int32, error) {
 	}
 
 	if nullable {
-		result -= decrement
+		if result == 0 {
+			return nil, err
+		} else {
+			result -= decrement
+		}
 	}
 
 	return &result, nil
@@ -113,7 +117,11 @@ func (r *reader) ReadInt64(nullable bool) (*int64, error) {
 	}
 
 	if nullable {
-		result -= decrement
+		if result == 0 {
+			return nil, err
+		} else {
+			result -= decrement
+		}
 	}
 
 	return &result, nil
@@ -137,8 +145,12 @@ func (r *reader) ReadUint32(nullable bool) (*uint32, error) {
 		result |= uint32(r.last & 0x7F);
 	}
 
-	if nullable && result > 0 {
-		result--
+	if nullable {
+		if result == 0 {
+			return nil, err
+		} else {
+			result--
+		}
 	}
 
 	return &result, nil
@@ -162,8 +174,12 @@ func (r *reader) ReadUint64(nullable bool) (*uint64, error) {
 		result |= uint64(r.last & 0x7F);
 	}
 
-	if nullable && result > 0 {
-		result--
+	if nullable {
+		if result == 0 {
+			return nil, err
+		} else {
+			result--
+		}
 	}
 
 	return &result, nil
