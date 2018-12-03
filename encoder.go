@@ -51,8 +51,15 @@ func (e *Encoder) SetLog(writer io.Writer) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	e.logger = wrapWriterLog(writer)
-	e.writer = newWriter(e.logger)
+	if writer != nil {
+		e.logger = wrapWriterLog(writer)
+		e.writer = newWriter(e.logger)
+	}
+
+	if e.logger != nil {
+		e.writer = newWriter(e.logger.Buffer)
+		e.logger = nil
+	}
 }
 
 // Encode encodes msg struct to writer

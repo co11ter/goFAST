@@ -48,8 +48,16 @@ func (d *Decoder) SetLog(writer io.Writer) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	d.logger = wrapReaderLog(d.reader.reader, writer)
-	d.reader = newReader(d.logger)
+	if writer != nil {
+		d.logger = wrapReaderLog(d.reader.reader, writer)
+		d.reader = newReader(d.logger)
+		return
+	}
+
+	if d.logger != nil {
+		d.reader = newReader(d.logger.ByteReader)
+		d.logger = nil
+	}
 }
 
 // Decode reads the next FAST-encoded message from reader
