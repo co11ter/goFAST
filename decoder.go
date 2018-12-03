@@ -59,11 +59,11 @@ func (d *Decoder) Decode(msg interface{}) error {
 	defer d.mu.Unlock()
 
 	d.log("// ----- new message start ----- //\n")
-	d.log("pmap parsing: ")
+	d.log("pmap decoding: ")
 	d.visitPMap()
 	d.log("\n  pmap = ", *d.current, "\n")
 
-	d.log("template parsing: ")
+	d.log("template decoding: ")
 	d.tid = d.visitTemplateID()
 	d.log("\n  template = ", d.tid, "\n")
 
@@ -126,12 +126,12 @@ func (d *Decoder) decodeSequence(instruction *Instruction, msg *message) {
 
 	for i:=0; i<length; i++ {
 		d.log("sequence elem[", i, "] start: \n")
-		d.log("pmap parsing: ")
+		d.log("pmap decoding: ")
 		d.visitPMap()
 		d.log("\n  pmap = ", *d.current, "\n")
 		for _, internal := range instruction.Instructions[1:] {
 
-			d.log("  parsing: ", internal.Name, " ")
+			d.log("  decoding: ", internal.Name, "\n    pmap -> ", d.current, "\n    reader -> ")
 			field := &field{
 				id: internal.ID,
 				name: internal.Name,
@@ -155,7 +155,7 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
 		if instruction.Type == TypeSequence {
 			d.decodeSequence(instruction, msg)
 		} else {
-			d.log("parsing: ", instruction.Name, " ")
+			d.log("decoding: ", instruction.Name, "\n  pmap -> ", d.current, "\n  reader -> ")
 			field := &field{
 				id: instruction.ID,
 				name: instruction.Name,

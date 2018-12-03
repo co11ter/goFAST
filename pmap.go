@@ -20,3 +20,16 @@ func (p *pMap) SetNextBit(v bool) {
 		p.bitmap |= p.mask;
 	}
 }
+
+func (p *pMap) String() (res string) {
+	mask := p.mask
+	for mask > 0 {
+		mask >>= 1
+		if (p.bitmap & mask) > 0 {
+			res += "1"
+		} else {
+			res += "0"
+		}
+	}
+	return
+}
