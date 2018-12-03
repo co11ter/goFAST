@@ -54,6 +54,7 @@ func (e *Encoder) SetLog(writer io.Writer) {
 	if writer != nil {
 		e.logger = wrapWriterLog(writer)
 		e.writer = newWriter(e.logger)
+		return
 	}
 
 	if e.logger != nil {
