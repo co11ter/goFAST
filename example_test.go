@@ -1,3 +1,7 @@
+// Copyright 2018 Alexander Poltoratskiy. All rights reserved.
+// Use of this source code is governed by the Apache 2.0
+// license that can be found in the LICENSE file.
+
 package fast_test
 
 import (
@@ -6,12 +10,6 @@ import (
 	"github.com/co11ter/goFAST"
 	"strings"
 )
-
-const xmlData = `
-
-`
-
-
 
 func ExampleDecoder_Decode() {
 	var xmlData = `

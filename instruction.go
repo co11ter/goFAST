@@ -5,7 +5,7 @@
 package fast
 
 import (
-	"math"
+	"github.com/shopspring/decimal"
 	"strconv"
 )
 
@@ -230,7 +230,7 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 			if err != nil {
 				return result, err
 			}
-			result = math.Pow10(int(*exponent)) * float64(*mantissa)
+			result, _ = decimal.New(*mantissa, *exponent).Float64()
 		}
 	}
 
@@ -242,14 +242,14 @@ func (i *Instruction) extractDecimal(reader *reader, s storage, pmap *pMap) (int
 	var exponent int32
 	for _, in := range i.Instructions {
 		if in.Type == TypeMantissa {
-			mField, err := i.extract(reader, s, pmap)
+			mField, err := in.extract(reader, s, pmap)
 			if err != nil {
 				return nil, err
 			}
 			mantissa = mField.(int64)
 		}
 		if in.Type == TypeExponent {
-			eField, err := i.extract(reader, s, pmap)
+			eField, err := in.extract(reader, s, pmap)
 			if err != nil {
 				return nil, err
 			}
@@ -257,7 +257,8 @@ func (i *Instruction) extractDecimal(reader *reader, s storage, pmap *pMap) (int
 		}
 	}
 
-	return math.Pow10(int(exponent)) * float64(mantissa), nil
+	result, _ := decimal.New(mantissa, exponent).Float64()
+	return result, nil
 }
 
 func isEmpty(value interface{}) bool {
