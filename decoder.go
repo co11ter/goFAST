@@ -25,8 +25,10 @@ type Decoder struct {
 	current *pMap
 
 	reader *reader
+	msg *message
 
 	logger *readerLog
+	prefix string // prefix for logger
 	mu sync.Mutex
 }
 
@@ -66,24 +68,25 @@ func (d *Decoder) Decode(msg interface{}) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	d.log("// ----- new message start ----- //\n")
+	d.prefix = "\n"
+	d.tid = 0
+
+	d.log("// ----- new message start ----- //")
 	d.log("pmap decoding: ")
 	d.visitPMap()
-	d.log("\n  pmap = ", *d.current, "\n")
+	d.log("  pmap = ", *d.current, "\ntemplate decoding: ")
 
-	d.log("template decoding: ")
 	d.tid = d.visitTemplateID()
-	d.log("\n  template = ", d.tid, "\n")
+	d.log("  template = ", d.tid)
 
 	tpl, ok := d.repo[d.tid]
 	if !ok {
 		return ErrD9
 	}
 
-	m := newMsg(msg)
-	m.SetTID(d.tid)
-	d.decodeSegment(tpl.Instructions, m)
-	d.tid = 0
+	d.msg = newMsg(msg)
+	d.msg.SetTID(d.tid)
+	d.decodeSegment(tpl.Instructions, 0)
 
 	return nil
 }
@@ -116,7 +119,7 @@ func (d *Decoder) visitTemplateID() uint {
 	return 0
 }
 
-func (d *Decoder) decodeSequence(instruction *Instruction, msg *message) {
+func (d *Decoder) decodeSequence(instruction *Instruction) {
 	d.log("sequence start: ")
 
 	tmp, err := instruction.Instructions[0].extract(d.reader, d.storage, d.current)
@@ -124,7 +127,7 @@ func (d *Decoder) decodeSequence(instruction *Instruction, msg *message) {
 		panic(err)
 	}
 	length := int(tmp.(uint32))
-	d.log("\n  length = ", length, "\n")
+	d.log("  length = ", length)
 
 	parent := &field{
 		id: instruction.ID,
@@ -133,55 +136,60 @@ func (d *Decoder) decodeSequence(instruction *Instruction, msg *message) {
 		value: length,
 	}
 
-	msg.SetLen(parent)
+	d.msg.SetLen(parent)
 
-	msg.Lock(parent)
-	defer msg.Unlock()
+	d.msg.Lock(parent)
+	defer d.msg.Unlock()
 
 	for i:=0; i<length; i++ {
-		d.log("sequence elem[", i, "] start: \n")
+		d.log("sequence elem[", i, "] start: ")
 		d.log("pmap decoding: ")
 		d.visitPMap()
-		d.log("\n  pmap = ", *d.current, "\n")
-		for _, internal := range instruction.Instructions[1:] {
-
-			d.log("  decoding: ", internal.Name, "\n    pmap -> ", d.current, "\n    reader -> ")
-			field := &field{
-				id: internal.ID,
-				name: internal.Name,
-				templateID: d.tid,
-				num: i,
-			}
-			field.value, err = internal.extract(d.reader, d.storage, d.current)
-			if err != nil {
-				panic(err)
-			}
-			d.log("\n    ", field.name, " = ", field.value, "\n")
-			msg.Set(field)
-		}
+		d.log("  pmap = ", *d.current)
+		d.decodeSegment(instruction.Instructions[1:], i)
 	}
 }
 
-func (d *Decoder) decodeSegment(instructions []*Instruction, msg *message) {
+func (d *Decoder) decodeSegment(instructions []*Instruction, index int) {
+	d.shift()
+	defer d.unshift()
+
 	var err error
 	for _, instruction := range instructions {
 		if instruction.Type == TypeSequence {
-			d.decodeSequence(instruction, msg)
+			d.decodeSequence(instruction)
 		} else {
-			d.log("decoding: ", instruction.Name, "\n  pmap -> ", d.current, "\n  reader -> ")
+			d.log("decoding: ", instruction.Name)
+			d.log("  pmap -> ", d.current)
+			d.log("  reader -> ")
 			field := &field{
 				id: instruction.ID,
 				name: instruction.Name,
 				templateID: d.tid,
+				num: index,
 			}
 			field.value, err = instruction.extract(d.reader, d.storage, d.current)
 			if err != nil {
 				panic(err)
 			}
-			d.log("\n  ", field.name, " = ", field.value, "\n")
-			msg.Set(field)
+			d.log("  ", field.name, " = ", field.value)
+			d.msg.Set(field)
 		}
 	}
+}
+
+func (d *Decoder) shift() {
+	if d.logger == nil {
+		return
+	}
+	d.prefix += "  "
+}
+
+func (d *Decoder) unshift() {
+	if d.logger == nil {
+		return
+	}
+	d.prefix = d.prefix[:len(d.prefix)-2]
 }
 
 func (d *Decoder) log(param ...interface{}) {
@@ -189,5 +197,5 @@ func (d *Decoder) log(param ...interface{}) {
 		return
 	}
 
-	d.logger.Log(param...)
+	d.logger.Log(append([]interface{}{d.prefix}, param...)...)
 }

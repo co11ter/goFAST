@@ -23,6 +23,7 @@ type Encoder struct {
 	tmp *bytes.Buffer
 	chunk *bytes.Buffer
 	writer *writer
+	msg *message
 
 	target io.Writer
 
@@ -69,8 +70,8 @@ func (e *Encoder) Encode(msg interface{}) error {
 	defer e.mu.Unlock()
 
 	e.log("// ----- new message start ----- //\n")
-	m := newMsg(msg)
-	e.tid = m.GetTID()
+	e.msg = newMsg(msg)
+	e.tid = e.msg.GetTID()
 
 	tpl, ok := e.repo[e.tid]
 	if !ok {
@@ -82,7 +83,7 @@ func (e *Encoder) Encode(msg interface{}) error {
 	e.log("\n  encoding -> ")
 	e.acceptTemplateID(uint32(e.tid))
 
-	e.encodeSegment(tpl.Instructions, m)
+	e.encodeSegment(tpl.Instructions)
 
 	return nil
 }
@@ -128,16 +129,10 @@ func (e *Encoder) acceptTemplateID(id uint32) {
 	e.writer.WriteUint32(false, id)
 }
 
-func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
+func (e *Encoder) encodeSegment(instructions []*Instruction) {
 	for _, instruction := range instructions {
 		if instruction.Type == TypeSequence {
-			field := &field{
-				id: instruction.ID,
-				name: instruction.Name,
-				templateID: e.tid,
-			}
-			msg.GetLen(field)
-			e.encodeSequence(instruction, msg, field.value.(int))
+			e.encodeSequence(instruction)
 		} else {
 			field := &field{
 				id: instruction.ID,
@@ -145,7 +140,7 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 				templateID: e.tid,
 			}
 
-			msg.Get(field)
+			e.msg.Get(field)
 			e.log("\n", instruction.Name, " = ", field.value, "\n")
 			e.log("  encoding -> ")
 			instruction.inject(e.writer, e.storage, e.current, field.value)
@@ -159,20 +154,23 @@ func (e *Encoder) encodeSegment(instructions []*Instruction, msg *message) {
 	e.log("\n")
 }
 
-func (e *Encoder) encodeSequence(instruction *Instruction, msg *message, length int) {
-	e.log("\nsequence start: ")
-	e.log("\n  length = ", length, "\n")
-	e.log("    encoding -> ")
-	instruction.Instructions[0].inject(e.writer, e.storage, e.current, uint32(length))
-
+func (e *Encoder) encodeSequence(instruction *Instruction) {
 	parent := &field{
 		id: instruction.ID,
 		name: instruction.Name,
 		templateID: e.tid,
 	}
 
-	msg.Lock(parent)
-	defer msg.Unlock()
+	e.msg.GetLen(parent)
+	length := parent.value.(int)
+
+	e.log("\nsequence start: ")
+	e.log("\n  length = ", length, "\n")
+	e.log("    encoding -> ")
+	instruction.Instructions[0].inject(e.writer, e.storage, e.current, uint32(length))
+
+	e.msg.Lock(parent)
+	defer e.msg.Unlock()
 
 	e.writeTmp()
 	for i:=0; i<length; i++ {
@@ -186,7 +184,7 @@ func (e *Encoder) encodeSequence(instruction *Instruction, msg *message, length 
 				num: i,
 			}
 
-			msg.Get(field)
+			e.msg.Get(field)
 			e.log("\n    ", internal.Name, " = ", field.value, "\n")
 			e.log("      encoding -> ")
 			internal.inject(e.writer, e.storage, e.current, field.value)
