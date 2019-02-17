@@ -186,7 +186,7 @@ func (e *Encoder) encodeSequence(instruction *Instruction, msg *message, length 
 				num: i,
 			}
 
-			msg.GetSlice(field)
+			msg.Get(field)
 			e.log("\n    ", internal.Name, " = ", field.value, "\n")
 			e.log("      encoding -> ")
 			internal.inject(e.writer, e.storage, e.current, field.value)

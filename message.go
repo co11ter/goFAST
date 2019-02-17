@@ -66,7 +66,19 @@ func (m *message) lookUpRField(field *field) (v reflect.Value, ok bool) {
 
 // find value in message and assign to field
 func (m *message) Get(field *field) {
-	if rField, ok := m.lookUpRField(field); ok {
+	var rField reflect.Value
+	if m.values[m.index].Kind() == reflect.Slice {
+		index := m.lookUpIndex(field)
+		if index == nil {
+			return
+		}
+
+		rField = m.values[m.index].Index(field.num).Field(*index)
+	} else {
+		rField, _ = m.lookUpRField(field)
+	}
+
+	if rField.IsValid() {
 		if rField.Kind() == reflect.Ptr {
 			if !rField.IsNil() {
 				field.value = rField.Elem().Interface()
@@ -84,21 +96,18 @@ func (m *message) GetLen(field *field) {
 	}
 }
 
-// find value in message and assign to field
-func (m *message) GetSlice(field *field) {
-	index := m.lookUpIndex(field)
-	if index == nil {
-		return
-	}
-
-	rField := m.values[m.index].Index(field.num).Field(*index)
-
-	if rField.Kind() == reflect.Ptr {
-		if !rField.IsNil() {
-			field.value = rField.Elem().Interface()
+func (m *message) SetLen(field *field) {
+	if rField, ok := m.lookUpRField(field); ok {
+		length := field.value.(int)
+		if length > rField.Cap() {
+			newValue := reflect.MakeSlice(rField.Type(), length, length)
+			reflect.Copy(newValue, rField)
+			rField.Set(newValue)
 		}
-	} else {
-		field.value = rField.Interface()
+
+		if length > rField.Len() {
+			rField.SetLen(length)
+		}
 	}
 }
 
@@ -128,39 +137,21 @@ func (m *message) Set(field *field) {
 		return
 	}
 
-	if rField, ok := m.lookUpRField(field); ok {
+	var rField reflect.Value
+	if m.values[m.index].Kind() == reflect.Slice {
+		index := m.lookUpIndex(field)
+		if index == nil {
+			return
+		}
+
+		rField = m.values[m.index].Index(field.num).Field(*index)
+	} else {
+		rField, _ = m.lookUpRField(field)
+	}
+
+	if rField.IsValid() {
 		m.set(rField, reflect.ValueOf(field.value))
 	}
-}
-
-func (m *message) SetSlice(field *field) {
-	if field.value == nil {
-		return
-	}
-
-	rField := m.values[m.index]
-
-	if field.num >= rField.Cap() {
-		newCap := rField.Cap() + rField.Cap()/2
-		if newCap < 4 {
-			newCap = 4
-		}
-		newValue := reflect.MakeSlice(rField.Type(), rField.Len(), newCap)
-		reflect.Copy(newValue, rField)
-		rField.Set(newValue)
-	}
-
-	if field.num >= rField.Len() {
-		rField.SetLen(field.num + 1)
-	}
-
-	index := m.lookUpIndex(field)
-	if index == nil {
-		return
-	}
-
-	rField = rField.Index(field.num).Field(*index)
-	m.set(rField, reflect.ValueOf(field.value))
 }
 
 func (m *message) set(field reflect.Value, value reflect.Value) {

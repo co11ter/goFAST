@@ -130,7 +130,10 @@ func (d *Decoder) decodeSequence(instruction *Instruction, msg *message) {
 		id: instruction.ID,
 		name: instruction.Name,
 		templateID: d.tid,
+		value: length,
 	}
+
+	msg.SetLen(parent)
 
 	msg.Lock(parent)
 	defer msg.Unlock()
@@ -154,7 +157,7 @@ func (d *Decoder) decodeSequence(instruction *Instruction, msg *message) {
 				panic(err)
 			}
 			d.log("\n    ", field.name, " = ", field.value, "\n")
-			msg.SetSlice(field)
+			msg.Set(field)
 		}
 	}
 }
