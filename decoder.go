@@ -132,6 +132,9 @@ func (d *Decoder) decodeSequence(instruction *Instruction, msg *message) {
 		templateID: d.tid,
 	}
 
+	msg.Lock(parent)
+	defer msg.Unlock()
+
 	for i:=0; i<length; i++ {
 		d.log("sequence elem[", i, "] start: \n")
 		d.log("pmap decoding: ")
@@ -145,7 +148,6 @@ func (d *Decoder) decodeSequence(instruction *Instruction, msg *message) {
 				name: internal.Name,
 				templateID: d.tid,
 				num: i,
-				parent: parent,
 			}
 			field.value, err = internal.extract(d.reader, d.storage, d.current)
 			if err != nil {

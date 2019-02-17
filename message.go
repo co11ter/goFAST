@@ -14,7 +14,8 @@ const structTag = "fast"
 
 type message struct {
 	tagMap map[string]int
-	msg    interface{}
+	values []reflect.Value
+	index int
 }
 
 func newMsg(msg interface{}) *message {
@@ -26,11 +27,30 @@ func newMsg(msg interface{}) *message {
 
 	rt := reflect.TypeOf(msg).Elem()
 
-	m := &message{tagMap: make(map[string]int), msg: msg}
+	m := &message{
+		tagMap: make(map[string]int),
+		values: []reflect.Value{rv},
+	}
 
 	parseType(rt, m.tagMap)
 
 	return m
+}
+
+func (m *message) Lock(field *field) bool {
+	v, ok := m.lookUpRField(field)
+	if !ok {
+		return false
+	}
+
+	m.values = append(m.values, v)
+	m.index++
+	return true
+}
+
+func (m *message) Unlock() {
+	m.values = m.values[:m.index]
+	m.index--
 }
 
 func (m *message) lookUpRField(field *field) (v reflect.Value, ok bool) {
@@ -39,7 +59,7 @@ func (m *message) lookUpRField(field *field) (v reflect.Value, ok bool) {
 		return
 	}
 
-	v = reflect.ValueOf(m.msg).Elem().Field(*index)
+	v = m.values[m.index].Elem().Field(*index)
 	ok = true
 	return
 }
@@ -66,17 +86,12 @@ func (m *message) GetLen(field *field) {
 
 // find value in message and assign to field
 func (m *message) GetSlice(field *field) {
-	rField, ok := m.lookUpRField(field.parent)
-	if !ok {
-		return
-	}
-
 	index := m.lookUpIndex(field)
 	if index == nil {
 		return
 	}
 
-	rField = rField.Index(field.num).Field(*index)
+	rField := m.values[m.index].Index(field.num).Field(*index)
 
 	if rField.Kind() == reflect.Ptr {
 		if !rField.IsNil() {
@@ -93,7 +108,7 @@ func (m *message) GetTID() uint {
 	if !ok {
 		return 0
 	}
-	return uint(reflect.ValueOf(m.msg).Elem().Field(index).Uint())
+	return uint(m.values[m.index].Elem().Field(index).Uint())
 }
 
 // set template id to message
@@ -103,7 +118,7 @@ func (m *message) SetTID(tid uint) {
 		return
 	}
 
-	rField := reflect.ValueOf(m.msg).Elem().Field(index)
+	rField := m.values[m.index].Elem().Field(index)
 	m.set(rField, reflect.ValueOf(tid))
 }
 
@@ -123,10 +138,7 @@ func (m *message) SetSlice(field *field) {
 		return
 	}
 
-	rField, ok := m.lookUpRField(field.parent)
-	if !ok {
-		return
-	}
+	rField := m.values[m.index]
 
 	if field.num >= rField.Cap() {
 		newCap := rField.Cap() + rField.Cap()/2

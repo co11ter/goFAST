@@ -9,7 +9,7 @@ type field struct {
 	name       string // instruction name
 	templateID uint   // template id
 	num        int    // slice index
-	parent     *field // parent field
+	multiple   bool   // has internal fields
 
 	value interface{}
 }

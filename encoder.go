@@ -171,6 +171,9 @@ func (e *Encoder) encodeSequence(instruction *Instruction, msg *message, length 
 		templateID: e.tid,
 	}
 
+	msg.Lock(parent)
+	defer msg.Unlock()
+
 	e.writeTmp()
 	for i:=0; i<length; i++ {
 		e.log("\n  sequence elem[", i, "] start: ")
@@ -181,7 +184,6 @@ func (e *Encoder) encodeSequence(instruction *Instruction, msg *message, length 
 				name: internal.Name,
 				templateID: e.tid,
 				num: i,
-				parent: parent,
 			}
 
 			msg.GetSlice(field)
