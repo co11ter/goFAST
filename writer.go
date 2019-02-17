@@ -105,49 +105,7 @@ func (w *writer) WriteUint64(nullable bool, value uint64) error {
 	return nil
 }
 
-func (w *writer) WriteInt32(nullable bool, value int32) error {
-	if !nullable && value == 0 {
-		w.buf.Write([]byte{0x80})
-		return nil
-	}
-
-	positive := value > 0
-
-	if nullable && positive {
-		value++
-	}
-
-	var sign int32
-	if value <= 0 {
-		sign = -1
-	}
-
-	b := make([]byte, 5)
-	i := 4
-	for i >= 0 && value != sign {
-		b[i] = byte(value & 0x7F)
-		value >>= 7
-		i--
-	}
-
-	i++
-	if positive {
-		if (b[i] & 0x40) > 0 {
-			i--
-			b[i] = 0x00
-		}
-	} else if (b[i] & 0x40) == 0 {
-		i--
-		b[i] = 0x7F
-	}
-
-	b[4] |= 0x80
-	w.buf.Write(b[i+1:])
-
-	return nil
-}
-
-func (w *writer) WriteInt64(nullable bool, value int64) error {
+func (w *writer) writeInt(nullable bool, value int64, size int) error {
 	if !nullable && value == 0 {
 		w.buf.Write([]byte{0x80})
 		return nil
@@ -164,8 +122,8 @@ func (w *writer) WriteInt64(nullable bool, value int64) error {
 		sign = -1
 	}
 
-	b := make([]byte, 10)
-	i := 9
+	b := make([]byte, size+2)
+	i := size
 	for i >= 0 && value != sign {
 		b[i] = byte(value & 0x7F)
 		value >>= 7
@@ -183,10 +141,17 @@ func (w *writer) WriteInt64(nullable bool, value int64) error {
 		b[i] = 0x7F
 	}
 
-	b[9] |= 0x80
-	w.buf.Write(b[i+1:])
-
+	b[size] |= 0x80
+	w.buf.Write(b[i:size+1])
 	return nil
+}
+
+func (w *writer) WriteInt32(nullable bool, value int32) error {
+	return w.writeInt(nullable, int64(value), 4)
+}
+
+func (w *writer) WriteInt64(nullable bool, value int64) error {
+	return w.writeInt(nullable, value, 9)
 }
 
 // TODO

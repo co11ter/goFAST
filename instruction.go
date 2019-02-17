@@ -33,6 +33,11 @@ func (i *Instruction) isNullable() bool {
 }
 
 func (i *Instruction) inject(writer *writer, s storage, pmap *pMap, value interface{}) (err error) {
+
+	if i.Type == TypeDecimal && len(i.Instructions) > 0 {
+		return i.injectDecimal(writer, s, pmap, value)
+	}
+
 	switch i.Operator {
 	case OperatorNone:
 		err = i.write(writer, value)
@@ -108,6 +113,13 @@ func (i *Instruction) write(writer *writer, value interface{}) (err error) {
 		err = writer.WriteInt64(i.isNullable(), value.(int64))
 	case TypeInt32, TypeExponent:
 		err = writer.WriteInt32(i.isNullable(), value.(int32))
+	case TypeDecimal:
+		dec := decimal.NewFromFloat(value.(float64))
+		err = writer.WriteInt32(i.isNullable(), dec.Exponent())
+		if err != nil {
+			return
+		}
+		err = writer.WriteInt64(false, dec.Coefficient().Int64())
 	}
 	return
 }
@@ -235,6 +247,28 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 	}
 
 	return result, err
+}
+
+func (i *Instruction) injectDecimal(writer *writer, s storage, pmap *pMap, value interface{}) (err error) {
+	dec := decimal.NewFromFloat(value.(float64))
+	mantissa := dec.Coefficient().Int64()
+	exponent := dec.Exponent()
+	for _, in := range i.Instructions {
+		if in.Type == TypeMantissa {
+			err = in.inject(writer, s, pmap, mantissa)
+			if err != nil {
+				return
+			}
+		}
+		if in.Type == TypeExponent {
+			err = in.inject(writer, s, pmap, exponent)
+			if err != nil {
+				return
+			}
+		}
+	}
+
+	return
 }
 
 func (i *Instruction) extractDecimal(reader *reader, s storage, pmap *pMap) (interface{}, error) {

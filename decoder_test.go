@@ -14,7 +14,7 @@ import (
 
 var (
 	decoder *fast.Decoder
-	buffer *bytes.Buffer
+	reader *bytes.Buffer
 )
 
 func init() {
@@ -25,18 +25,18 @@ func init() {
 	defer ftpl.Close()
 	tpls := fast.ParseXMLTemplate(ftpl)
 
-	buffer = &bytes.Buffer{}
-	decoder = fast.NewDecoder(buffer, tpls...)
+	reader = &bytes.Buffer{}
+	decoder = fast.NewDecoder(reader, tpls...)
 }
 
 func decode(data []byte, msg interface{}, expect interface{}, t *testing.T) {
-	buffer.Write(data)
+	reader.Write(data)
 	err := decoder.Decode(msg)
 	if err != nil {
 		t.Fatal("can not decode", err)
 	}
 
-	if buffer.Len() > 0 {
+	if reader.Len() > 0 {
 		t.Fatal("buffer is not empty")
 	}
 
@@ -45,22 +45,7 @@ func decode(data []byte, msg interface{}, expect interface{}, t *testing.T) {
 	}
 }
 
-func TestDecimal(t *testing.T) {
-	data := []byte{0xf8, 0x81, 0xfe, 0x4, 0x83, 0xff, 0xc, 0x8a, 0xfc, 0xa0, 0xff, 0x0, 0xef}
-	type Msg struct {
-		CopyDecimal          float64
-		MandatoryDecimal     float64
-		IndividualDecimal    float64
-		IndividualDecimalOpt float64
-	}
-
-	var msg Msg
-	var expect = Msg{
-		CopyDecimal: 5.15,
-		MandatoryDecimal: 154.6,
-		IndividualDecimal: 0.0032,
-		IndividualDecimalOpt: 11.1,
-	}
-
-	decode(data, &msg, &expect, t)
+func TestDecimalDecode(t *testing.T) {
+	var msg decimal
+	decode(decimalData1, &msg, &decimalMessage1, t)
 }
