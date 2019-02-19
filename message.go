@@ -43,7 +43,7 @@ func (m *message) Lock(field *field) bool {
 		return false
 	}
 
-	m.values = append(m.values, v)
+	m.values = append(m.values, v.Index(field.num).Addr())
 	m.index++
 	return true
 }
@@ -66,19 +66,7 @@ func (m *message) lookUpRField(field *field) (v reflect.Value, ok bool) {
 
 // find value in message and assign to field
 func (m *message) Get(field *field) {
-	var rField reflect.Value
-	if m.values[m.index].Kind() == reflect.Slice {
-		index := m.lookUpIndex(field)
-		if index == nil {
-			return
-		}
-
-		rField = m.values[m.index].Index(field.num).Field(*index)
-	} else {
-		rField, _ = m.lookUpRField(field)
-	}
-
-	if rField.IsValid() {
+	if rField, ok := m.lookUpRField(field); ok {
 		if rField.Kind() == reflect.Ptr {
 			if !rField.IsNil() {
 				field.value = rField.Elem().Interface()
@@ -137,19 +125,7 @@ func (m *message) Set(field *field) {
 		return
 	}
 
-	var rField reflect.Value
-	if m.values[m.index].Kind() == reflect.Slice {
-		index := m.lookUpIndex(field)
-		if index == nil {
-			return
-		}
-
-		rField = m.values[m.index].Index(field.num).Field(*index)
-	} else {
-		rField, _ = m.lookUpRField(field)
-	}
-
-	if rField.IsValid() {
+	if rField, ok := m.lookUpRField(field); ok {
 		m.set(rField, reflect.ValueOf(field.value))
 	}
 }

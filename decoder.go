@@ -138,15 +138,15 @@ func (d *Decoder) decodeSequence(instruction *Instruction) {
 
 	d.msg.SetLen(parent)
 
-	d.msg.Lock(parent)
-	defer d.msg.Unlock()
-
 	for i:=0; i<length; i++ {
+		parent.num = i
 		d.log("sequence elem[", i, "] start: ")
 		d.log("pmap decoding: ")
 		d.visitPMap()
 		d.log("  pmap = ", *d.current)
+		d.msg.Lock(parent)
 		d.decodeSegment(instruction.Instructions[1:], i)
+		d.msg.Unlock()
 	}
 }
 
