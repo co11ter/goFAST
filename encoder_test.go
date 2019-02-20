@@ -45,3 +45,7 @@ func encode(msg interface{}, expect []byte, t *testing.T) {
 func TestDecimalEncode(t *testing.T) {
 	encode(&decimalMessage1, decimalData1, t)
 }
+
+func TestSequenceEncode(t *testing.T) {
+	encode(&sequenceMessage1, sequenceData1, t)
+}
