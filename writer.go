@@ -53,10 +53,10 @@ func (w *writer) WritePMap(m *pMap) error {
 	return err
 }
 
-func (w *writer) WriteUint32(nullable bool, value uint32) error {
+func (w *writer) WriteUint32(nullable bool, value uint32) (err error) {
 	if !nullable && value == 0 {
-		w.dataBuf.Write([]byte{0x80})
-		return nil
+		_, err = w.dataBuf.Write([]byte{0x80})
+		return
 	}
 
 	if nullable && value > 0 {
@@ -72,15 +72,15 @@ func (w *writer) WriteUint32(nullable bool, value uint32) error {
 	}
 
 	b[4] |= 0x80
-	w.dataBuf.Write(b[i+1:])
+	_, err = w.dataBuf.Write(b[i+1:])
 
-	return nil
+	return
 }
 
-func (w *writer) WriteUint64(nullable bool, value uint64) error {
+func (w *writer) WriteUint64(nullable bool, value uint64) (err error) {
 	if !nullable && value == 0 {
-		w.dataBuf.Write([]byte{0x80})
-		return nil
+		_, err = w.dataBuf.Write([]byte{0x80})
+		return
 	}
 
 	if nullable && value > 0 {
@@ -96,15 +96,15 @@ func (w *writer) WriteUint64(nullable bool, value uint64) error {
 	}
 
 	b[9] |= 0x80
-	w.dataBuf.Write(b[i+1:])
+	_, err = w.dataBuf.Write(b[i+1:])
 
-	return nil
+	return
 }
 
-func (w *writer) writeInt(nullable bool, value int64, size int) error {
+func (w *writer) writeInt(nullable bool, value int64, size int) (err error) {
 	if !nullable && value == 0 {
-		w.dataBuf.Write([]byte{0x80})
-		return nil
+		_, err = w.dataBuf.Write([]byte{0x80})
+		return
 	}
 
 	positive := value > 0
@@ -138,8 +138,8 @@ func (w *writer) writeInt(nullable bool, value int64, size int) error {
 	}
 
 	b[size] |= 0x80
-	w.dataBuf.Write(b[i:size+1])
-	return nil
+	_, err = w.dataBuf.Write(b[i:size+1])
+	return
 }
 
 func (w *writer) WriteInt32(nullable bool, value int32) error {
@@ -155,33 +155,37 @@ func (w *writer) WriteUnicodeString(nullable bool, value string) error {
 	return nil
 }
 
-func (w *writer) WriteASCIIString(nullable bool, value string) error {
+func (w *writer) WriteASCIIString(nullable bool, value string) (err error) {
 	if len(value) == 0 {
 		if nullable {
-			w.dataBuf.Write([]byte{0x00})
-			return nil
+			_, err = w.dataBuf.Write([]byte{0x00})
+			return
 		}
-		w.dataBuf.Write([]byte{0x00})
-		return nil
+		_, err = w.dataBuf.Write([]byte{0x00})
+		return
 	}
 
 	if len(value) == 1 && value[0] == 0x00 {
 		if nullable {
-			w.dataBuf.Write([]byte{0x00, 0x00, 0x80})
+			_, err = w.dataBuf.Write([]byte{0x00, 0x00, 0x80})
 		} else {
-			w.dataBuf.Write([]byte{0x00, 0x80})
+			_, err = w.dataBuf.Write([]byte{0x00, 0x80})
 		}
-		return nil
+		return
 	}
 
 	w.strBuf.WriteString(value[:len(value)-1])
-	w.dataBuf.Write(w.strBuf.Bytes())
+	_, err = w.dataBuf.Write(w.strBuf.Bytes())
+	if err != nil {
+		return
+	}
+
 	w.strBuf.Reset()
-	w.dataBuf.Write([]byte{value[len(value)-1] | 0x80})
-	return nil
+	_, err = w.dataBuf.Write([]byte{value[len(value)-1] | 0x80})
+	return
 }
 
 func (w *writer) WriteNil() error {
-	w.dataBuf.Write([]byte{0x80})
-	return nil
+	_, err := w.dataBuf.Write([]byte{0x80})
+	return err
 }
