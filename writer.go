@@ -16,31 +16,27 @@ type buffer interface {
 }
 
 type writer struct {
-	buf buffer
+	dataBuf buffer
+	pMapBuf bytes.Buffer
+
 	strBuf bytes.Buffer
-	tmpBuf bytes.Buffer
 }
 
 func newWriter(buf buffer) *writer {
-	return &writer{buf: buf}
+	return &writer{dataBuf: buf}
 }
 
 func (w *writer) Bytes() []byte {
-	b := append(w.buf.Bytes(), w.tmpBuf.Bytes()...)
-	w.buf.Reset()
-	w.tmpBuf.Reset()
+	b := append(w.pMapBuf.Bytes(), w.dataBuf.Bytes()...)
+	w.pMapBuf.Reset()
+	w.dataBuf.Reset()
 	return b
 }
 
 func (w *writer) WritePMap(m *pMap) error {
-	_, err := w.tmpBuf.Write(w.buf.Bytes())
-	w.buf.Reset()
-	if err != nil {
-		return err
-	}
-
+	var err error
 	if m.bitmap == 0 {
-		_, err = w.buf.Write([]byte{0x80})
+		_, err = w.pMapBuf.Write([]byte{0x80})
 		return err
 	}
 
@@ -53,13 +49,13 @@ func (w *writer) WritePMap(m *pMap) error {
 	}
 	b[7] |= 0x80
 
-	_, err = w.buf.Write(b[i+1:])
+	_, err = w.pMapBuf.Write(b[i+1:])
 	return err
 }
 
 func (w *writer) WriteUint32(nullable bool, value uint32) error {
 	if !nullable && value == 0 {
-		w.buf.Write([]byte{0x80})
+		w.dataBuf.Write([]byte{0x80})
 		return nil
 	}
 
@@ -76,14 +72,14 @@ func (w *writer) WriteUint32(nullable bool, value uint32) error {
 	}
 
 	b[4] |= 0x80
-	w.buf.Write(b[i+1:])
+	w.dataBuf.Write(b[i+1:])
 
 	return nil
 }
 
 func (w *writer) WriteUint64(nullable bool, value uint64) error {
 	if !nullable && value == 0 {
-		w.buf.Write([]byte{0x80})
+		w.dataBuf.Write([]byte{0x80})
 		return nil
 	}
 
@@ -100,14 +96,14 @@ func (w *writer) WriteUint64(nullable bool, value uint64) error {
 	}
 
 	b[9] |= 0x80
-	w.buf.Write(b[i+1:])
+	w.dataBuf.Write(b[i+1:])
 
 	return nil
 }
 
 func (w *writer) writeInt(nullable bool, value int64, size int) error {
 	if !nullable && value == 0 {
-		w.buf.Write([]byte{0x80})
+		w.dataBuf.Write([]byte{0x80})
 		return nil
 	}
 
@@ -142,7 +138,7 @@ func (w *writer) writeInt(nullable bool, value int64, size int) error {
 	}
 
 	b[size] |= 0x80
-	w.buf.Write(b[i:size+1])
+	w.dataBuf.Write(b[i:size+1])
 	return nil
 }
 
@@ -162,30 +158,30 @@ func (w *writer) WriteUnicodeString(nullable bool, value string) error {
 func (w *writer) WriteASCIIString(nullable bool, value string) error {
 	if len(value) == 0 {
 		if nullable {
-			w.buf.Write([]byte{0x00})
+			w.dataBuf.Write([]byte{0x00})
 			return nil
 		}
-		w.buf.Write([]byte{0x00})
+		w.dataBuf.Write([]byte{0x00})
 		return nil
 	}
 
 	if len(value) == 1 && value[0] == 0x00 {
 		if nullable {
-			w.buf.Write([]byte{0x00, 0x00, 0x80})
+			w.dataBuf.Write([]byte{0x00, 0x00, 0x80})
 		} else {
-			w.buf.Write([]byte{0x00, 0x80})
+			w.dataBuf.Write([]byte{0x00, 0x80})
 		}
 		return nil
 	}
 
 	w.strBuf.WriteString(value[:len(value)-1])
-	w.buf.Write(w.strBuf.Bytes())
+	w.dataBuf.Write(w.strBuf.Bytes())
 	w.strBuf.Reset()
-	w.buf.Write([]byte{value[len(value)-1] | 0x80})
+	w.dataBuf.Write([]byte{value[len(value)-1] | 0x80})
 	return nil
 }
 
 func (w *writer) WriteNil() error {
-	w.buf.Write([]byte{0x80})
+	w.dataBuf.Write([]byte{0x80})
 	return nil
 }
