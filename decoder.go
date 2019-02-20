@@ -87,7 +87,7 @@ func (d *Decoder) Decode(msg interface{}) error {
 
 	d.msg = newMsg(msg)
 	d.msg.SetTID(d.tid)
-	d.decodeSegment(tpl.Instructions, 0)
+	d.decodeSegment(tpl.Instructions)
 
 	return nil
 }
@@ -151,7 +151,7 @@ func (d *Decoder) decodeSequence(instruction *Instruction) {
 		}
 
 		d.msg.Lock(parent)
-		d.decodeSegment(instruction.Instructions[1:], i)
+		d.decodeSegment(instruction.Instructions[1:])
 		d.msg.Unlock()
 
 		if instruction.pMapSize > 0 {
@@ -160,7 +160,7 @@ func (d *Decoder) decodeSequence(instruction *Instruction) {
 	}
 }
 
-func (d *Decoder) decodeSegment(instructions []*Instruction, index int) {
+func (d *Decoder) decodeSegment(instructions []*Instruction) {
 	d.shift()
 	defer d.unshift()
 
@@ -176,7 +176,6 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, index int) {
 				id: instruction.ID,
 				name: instruction.Name,
 				templateID: d.tid,
-				num: index,
 			}
 			field.value, err = instruction.extract(d.reader, d.storage, d.pMaps[d.index])
 			if err != nil {

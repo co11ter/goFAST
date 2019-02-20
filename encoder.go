@@ -22,6 +22,7 @@ type Encoder struct {
 
 	tmp *bytes.Buffer
 	chunk *bytes.Buffer
+
 	writer *writer
 	msg *message
 
@@ -86,6 +87,9 @@ func (e *Encoder) Encode(msg interface{}) error {
 	e.acceptTemplateID(uint32(e.tid))
 
 	e.encodeSegment(tpl.Instructions)
+	e.log("\n")
+	e.commit()
+	e.log("\n")
 
 	return nil
 }
@@ -158,9 +162,6 @@ func (e *Encoder) encodeSegment(instructions []*Instruction) {
 	e.log("\npmap = ", e.pMaps[e.index], "\n")
 	e.log("  encoding -> ")
 	e.writePMap()
-	e.log("\n")
-	e.commit()
-	e.log("\n")
 }
 
 func (e *Encoder) encodeSequence(instruction *Instruction) {
@@ -178,32 +179,24 @@ func (e *Encoder) encodeSequence(instruction *Instruction) {
 	e.log("    encoding -> ")
 	instruction.Instructions[0].inject(e.writer, e.storage, e.pMaps[e.index], uint32(length))
 
-	e.msg.Lock(parent)
-	defer e.msg.Unlock()
-
 	e.writeTmp()
 	for i:=0; i<length; i++ {
+		parent.num = i
 		e.log("\n  sequence elem[", i, "] start: ")
-		e.acceptPMap()
-		for _, internal := range instruction.Instructions[1:] {
-			field := &field{
-				id: internal.ID,
-				name: internal.Name,
-				templateID: e.tid,
-				num: i,
-			}
 
-			e.msg.Get(field)
-			e.log("\n    ", internal.Name, " = ", field.value, "\n")
-			e.log("      encoding -> ")
-			internal.inject(e.writer, e.storage, e.pMaps[e.index], field.value)
+		if instruction.pMapSize > 0 {
+			e.acceptPMap()
 		}
 
-		e.log("\n  pmap = ", e.pMaps[e.index], "\n")
-		e.log("    encoding -> ")
-		e.writePMap()
+		e.msg.Lock(parent)
+		e.encodeSegment(instruction.Instructions[1:])
+		e.msg.Unlock()
+
 		e.writeChunk()
-		e.restorePMap()
+
+		if instruction.pMapSize > 0 {
+			e.restorePMap()
+		}
 	}
 }
 
