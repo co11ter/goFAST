@@ -11,26 +11,30 @@ import (
 
 type buffer interface {
 	io.Writer
+	io.WriterTo
 	Bytes() []byte
 	Reset()
 }
 
 type writer struct {
 	dataBuf buffer
-	pMapBuf bytes.Buffer
+	pMapBuf buffer
 
 	strBuf bytes.Buffer
 }
 
-func newWriter(buf buffer) *writer {
-	return &writer{dataBuf: buf}
+func newWriter(dataBuf, pMapBuf buffer) *writer {
+	return &writer{dataBuf: dataBuf, pMapBuf: pMapBuf}
 }
 
-func (w *writer) Bytes() []byte {
-	b := append(w.pMapBuf.Bytes(), w.dataBuf.Bytes()...)
+func (w *writer) WriteTo(writer io.Writer) {
+	w.pMapBuf.WriteTo(writer)
+	w.dataBuf.WriteTo(writer)
+}
+
+func (w *writer) Reset() {
 	w.pMapBuf.Reset()
 	w.dataBuf.Reset()
-	return b
 }
 
 func (w *writer) WritePMap(m *pMap) error {

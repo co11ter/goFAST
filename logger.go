@@ -24,6 +24,10 @@ func (l *writerLog) Write(b []byte) (n int, err error) {
 	return 	l.Buffer.Write(b)
 }
 
+func (l *writerLog) WriteTo(w io.Writer) (n int64, err error) {
+	return l.Buffer.WriteTo(w)
+}
+
 func (l *writerLog) Log(param ...interface{}) {
 	l.log.Write([]byte(fmt.Sprint(param...)))
 }

@@ -38,7 +38,7 @@ func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 		storage: make(map[string]interface{}),
 		chunk: &bytes.Buffer{},
 		tmp: &bytes.Buffer{},
-		writer: newWriter(&bytes.Buffer{}),
+		writer: newWriter(&bytes.Buffer{}, &bytes.Buffer{}),
 		target: writer,
 	}
 	for _, t := range tmps {
@@ -54,12 +54,12 @@ func (e *Encoder) SetLog(writer io.Writer) {
 
 	if writer != nil {
 		e.logger = wrapWriterLog(writer)
-		e.writer = newWriter(e.logger)
+		e.writer = newWriter(e.logger, wrapWriterLog(writer))
 		return
 	}
 
 	if e.logger != nil {
-		e.writer = newWriter(e.logger.Buffer)
+		e.writer = newWriter(&bytes.Buffer{}, &bytes.Buffer{})
 		e.logger = nil
 	}
 }
@@ -93,11 +93,12 @@ func (e *Encoder) writePMap() {
 }
 
 func (e *Encoder) writeTmp() {
-	e.tmp.Write(e.writer.Bytes())
+	e.writer.WriteTo(e.tmp)
+	e.writer.Reset()
 }
 
 func (e *Encoder) writeChunk() {
-	e.chunk.Write(e.writer.Bytes())
+	e.writer.WriteTo(e.chunk)
 	if e.prev != nil {
 		e.current = e.prev
 		e.prev = nil
@@ -107,11 +108,18 @@ func (e *Encoder) writeChunk() {
 func (e *Encoder) commit() error {
 	e.current = nil
 	e.prev = nil
-	tmp := append(e.writer.Bytes(), e.tmp.Bytes()...)
-	tmp = append(tmp, e.chunk.Bytes()...)
-	_, err := e.target.Write(tmp)
+
+	tmp := &bytes.Buffer{}
+	e.writer.WriteTo(tmp)
+	e.tmp.WriteTo(tmp)
+	e.chunk.WriteTo(tmp)
+
+	tmp.WriteTo(e.target)
+
+	e.writer.Reset()
+	e.tmp.Reset()
 	e.chunk.Reset()
-	return err
+	return nil
 }
 
 func (e *Encoder) acceptPMap() {
