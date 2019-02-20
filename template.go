@@ -111,7 +111,27 @@ func (p *xmlParser) Parse() (templates []*Template) {
 		}
 	}
 
+	for _, tpl := range templates {
+		p.postProcessing(tpl.Instructions)
+	}
+
 	return templates
+}
+
+func (p *xmlParser) postProcessing(instructions []*Instruction) {
+	for _, item := range instructions {
+		if item.Type != TypeSequence {
+			continue
+		}
+
+		for _, instruction := range item.Instructions {
+			if instruction.hasPmapBit() {
+				item.pMapSize++
+			}
+		}
+
+		p.postProcessing(item.Instructions)
+	}
 }
 
 func (p *xmlParser) parseTemplate(token *xml.StartElement) *Template {
@@ -167,6 +187,9 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
 			if instruction.Type == TypeSequence {
 				inner := p.parseInstruction(&start)
 				instruction.Instructions = append(instruction.Instructions, inner)
+				if inner.Type == TypeLength && instruction.Presence == PresenceOptional {
+					inner.Presence = PresenceOptional
+				}
 			} else if instruction.Type == TypeDecimal {
 				p.parseDecimalInstructionOrOperator(&start, instruction)
 			} else {

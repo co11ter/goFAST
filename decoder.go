@@ -21,8 +21,8 @@ type Decoder struct {
 
 	tid uint // template id
 
-	prev *pMap
-	current *pMap
+	pMaps []*pMap
+	index int // index for current presence map
 
 	reader *reader
 	msg *message
@@ -70,11 +70,12 @@ func (d *Decoder) Decode(msg interface{}) error {
 
 	d.prefix = "\n"
 	d.tid = 0
+	d.pMaps = []*pMap{}
 
 	d.log("// ----- new message start ----- //")
 	d.log("pmap decoding: ")
 	d.visitPMap()
-	d.log("  pmap = ", *d.current, "\ntemplate decoding: ")
+	d.log("  pmap = ", *d.pMaps[d.index], "\ntemplate decoding: ")
 
 	d.tid = d.visitTemplateID()
 	d.log("  template = ", d.tid)
@@ -92,24 +93,25 @@ func (d *Decoder) Decode(msg interface{}) error {
 }
 
 func (d *Decoder) visitPMap() {
-	var err error
-	if d.current == nil {
-		d.current, err = d.reader.ReadPMap()
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		tmp := *d.current
-		d.current, err = d.reader.ReadPMap()
-		if err != nil {
-			panic(err)
-		}
-		d.prev = &tmp
+	m, err := d.reader.ReadPMap()
+	if err != nil {
+		panic(err)
 	}
+
+	if len(d.pMaps) > 0 {
+		d.index++
+	}
+
+	d.pMaps = append(d.pMaps, m)
+}
+
+func (d *Decoder) restorePMap() {
+	d.pMaps = d.pMaps[:d.index]
+	d.index--
 }
 
 func (d *Decoder) visitTemplateID() uint {
-	if d.current.IsNextBitSet() {
+	if d.pMaps[d.index].IsNextBitSet() {
 		tmp, err := d.reader.ReadUint32(false)
 		if err != nil {
 			panic(err)
@@ -122,7 +124,7 @@ func (d *Decoder) visitTemplateID() uint {
 func (d *Decoder) decodeSequence(instruction *Instruction) {
 	d.log("sequence start: ")
 
-	tmp, err := instruction.Instructions[0].extract(d.reader, d.storage, d.current)
+	tmp, err := instruction.Instructions[0].extract(d.reader, d.storage, d.pMaps[d.index])
 	if err != nil {
 		panic(err)
 	}
@@ -141,12 +143,20 @@ func (d *Decoder) decodeSequence(instruction *Instruction) {
 	for i:=0; i<length; i++ {
 		parent.num = i
 		d.log("sequence elem[", i, "] start: ")
-		d.log("pmap decoding: ")
-		d.visitPMap()
-		d.log("  pmap = ", *d.current)
+
+		if instruction.pMapSize > 0 {
+			d.log("pmap decoding: ")
+			d.visitPMap()
+			d.log("  pmap = ", *d.pMaps[d.index])
+		}
+
 		d.msg.Lock(parent)
 		d.decodeSegment(instruction.Instructions[1:], i)
 		d.msg.Unlock()
+
+		if instruction.pMapSize > 0 {
+			d.restorePMap()
+		}
 	}
 }
 
@@ -160,7 +170,7 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, index int) {
 			d.decodeSequence(instruction)
 		} else {
 			d.log("decoding: ", instruction.Name)
-			d.log("  pmap -> ", d.current)
+			d.log("  pmap -> ", d.pMaps[d.index])
 			d.log("  reader -> ")
 			field := &field{
 				id: instruction.ID,
@@ -168,7 +178,7 @@ func (d *Decoder) decodeSegment(instructions []*Instruction, index int) {
 				templateID: d.tid,
 				num: index,
 			}
-			field.value, err = instruction.extract(d.reader, d.storage, d.current)
+			field.value, err = instruction.extract(d.reader, d.storage, d.pMaps[d.index])
 			if err != nil {
 				panic(err)
 			}

@@ -18,6 +18,8 @@ type Instruction struct {
 	Operator     InstructionOperator
 	Instructions []*Instruction
 	Value        interface{}
+
+	pMapSize     int
 }
 
 func (i *Instruction) key() string {
@@ -30,6 +32,10 @@ func (i *Instruction) isOptional() bool {
 
 func (i *Instruction) isNullable() bool {
 	return i.isOptional() && (i.Operator != OperatorConstant)
+}
+
+func (i *Instruction) hasPmapBit() bool {
+	return i.Operator > OperatorDelta || (i.Operator == OperatorConstant && i.isOptional())
 }
 
 func (i *Instruction) inject(writer *writer, s storage, pmap *pMap, value interface{}) (err error) {
