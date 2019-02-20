@@ -49,3 +49,9 @@ func TestDecimalDecode(t *testing.T) {
 	var msg decimal
 	decode(decimalData1, &msg, &decimalMessage1, t)
 }
+
+func TestSequenceDecode(t *testing.T) {
+	var msg sequence
+	decode(sequenceData1, &msg, &sequenceMessage1, t)
+
+}

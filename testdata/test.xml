@@ -19,6 +19,17 @@
                 <delta/>
             </mantissa>
         </decimal>
+    </template>
 
+    <template name="Sequence" id="2" xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+        <uInt32 name="TestData" id="1"/>
+        <sequence name="OuterSequence">
+            <length name="NoOuterSequence" id="2"/>
+            <uInt32 name="OuterTestData" id="3"/>
+            <sequence name="InnerSequence" presence="optional">
+                <length name="NoInnerSequence" id="4"/>
+                <uInt32 name="InnerTestData" id="5"/>
+            </sequence>
+        </sequence>
     </template>
 </templates>
