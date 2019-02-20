@@ -17,8 +17,8 @@ type Encoder struct {
 
 	tid uint // template id
 
-	prev *pMap
-	current *pMap
+	pMaps []*pMap
+	index int // index for current presence map
 
 	tmp *bytes.Buffer
 	chunk *bytes.Buffer
@@ -69,6 +69,8 @@ func (e *Encoder) Encode(msg interface{}) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
+	e.pMaps = []*pMap{}
+
 	e.log("// ----- new message start ----- //\n")
 	e.msg = newMsg(msg)
 	e.tid = e.msg.GetTID()
@@ -89,7 +91,7 @@ func (e *Encoder) Encode(msg interface{}) error {
 }
 
 func (e *Encoder) writePMap() {
-	e.writer.WritePMap(e.current)
+	e.writer.WritePMap(e.pMaps[e.index])
 }
 
 func (e *Encoder) writeTmp() {
@@ -99,16 +101,25 @@ func (e *Encoder) writeTmp() {
 
 func (e *Encoder) writeChunk() {
 	e.writer.WriteTo(e.chunk)
-	if e.prev != nil {
-		e.current = e.prev
-		e.prev = nil
+	e.writer.Reset()
+}
+
+func (e *Encoder) acceptPMap() {
+	m := &pMap{mask: 128}
+
+	if len(e.pMaps) > 0 {
+		e.index++
 	}
+
+	e.pMaps = append(e.pMaps, m)
+}
+
+func (e *Encoder) restorePMap() {
+	e.pMaps = e.pMaps[:e.index]
+	e.index--
 }
 
 func (e *Encoder) commit() error {
-	e.current = nil
-	e.prev = nil
-
 	tmp := &bytes.Buffer{}
 	e.writer.WriteTo(tmp)
 	e.tmp.WriteTo(tmp)
@@ -122,18 +133,8 @@ func (e *Encoder) commit() error {
 	return nil
 }
 
-func (e *Encoder) acceptPMap() {
-	if e.current == nil {
-		e.current = &pMap{mask: 128}
-	} else {
-		tmp := *e.current
-		e.current = &pMap{mask: 128}
-		e.prev = &tmp
-	}
-}
-
 func (e *Encoder) acceptTemplateID(id uint32) {
-	e.current.SetNextBit(true)
+	e.pMaps[e.index].SetNextBit(true)
 	e.writer.WriteUint32(false, id)
 }
 
@@ -151,10 +152,10 @@ func (e *Encoder) encodeSegment(instructions []*Instruction) {
 			e.msg.Get(field)
 			e.log("\n", instruction.Name, " = ", field.value, "\n")
 			e.log("  encoding -> ")
-			instruction.inject(e.writer, e.storage, e.current, field.value)
+			instruction.inject(e.writer, e.storage, e.pMaps[e.index], field.value)
 		}
 	}
-	e.log("\npmap = ", e.current, "\n")
+	e.log("\npmap = ", e.pMaps[e.index], "\n")
 	e.log("  encoding -> ")
 	e.writePMap()
 	e.log("\n")
@@ -175,7 +176,7 @@ func (e *Encoder) encodeSequence(instruction *Instruction) {
 	e.log("\nsequence start: ")
 	e.log("\n  length = ", length, "\n")
 	e.log("    encoding -> ")
-	instruction.Instructions[0].inject(e.writer, e.storage, e.current, uint32(length))
+	instruction.Instructions[0].inject(e.writer, e.storage, e.pMaps[e.index], uint32(length))
 
 	e.msg.Lock(parent)
 	defer e.msg.Unlock()
@@ -195,13 +196,14 @@ func (e *Encoder) encodeSequence(instruction *Instruction) {
 			e.msg.Get(field)
 			e.log("\n    ", internal.Name, " = ", field.value, "\n")
 			e.log("      encoding -> ")
-			internal.inject(e.writer, e.storage, e.current, field.value)
+			internal.inject(e.writer, e.storage, e.pMaps[e.index], field.value)
 		}
 
-		e.log("\n  pmap = ", e.current, "\n")
+		e.log("\n  pmap = ", e.pMaps[e.index], "\n")
 		e.log("    encoding -> ")
 		e.writePMap()
 		e.writeChunk()
+		e.restorePMap()
 	}
 }
 
