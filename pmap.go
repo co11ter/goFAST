@@ -4,6 +4,8 @@
 
 package fast
 
+const defaultMask = 128
+
 type pMap struct {
 	bitmap uint
 	mask uint

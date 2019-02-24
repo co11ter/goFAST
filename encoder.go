@@ -18,12 +18,11 @@ type Encoder struct {
 	tid uint // template id
 
 	pMaps []*pMap
-	index int // index for current presence map
+	pMapIndex int // index for current presence map
 
-	tmp *bytes.Buffer
-	chunk *bytes.Buffer
+	writers []*writer
+	writerIndex int // index for current writer
 
-	writer *writer
 	msg *message
 
 	target io.Writer
@@ -37,9 +36,6 @@ func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 	encoder := &Encoder{
 		repo: make(map[uint]*Template),
 		storage: make(map[string]interface{}),
-		chunk: &bytes.Buffer{},
-		tmp: &bytes.Buffer{},
-		writer: newWriter(&bytes.Buffer{}, &bytes.Buffer{}),
 		target: writer,
 	}
 	for _, t := range tmps {
@@ -55,12 +51,10 @@ func (e *Encoder) SetLog(writer io.Writer) {
 
 	if writer != nil {
 		e.logger = wrapWriterLog(writer)
-		e.writer = newWriter(e.logger, wrapWriterLog(writer))
 		return
 	}
 
 	if e.logger != nil {
-		e.writer = newWriter(&bytes.Buffer{}, &bytes.Buffer{})
 		e.logger = nil
 	}
 }
@@ -71,6 +65,9 @@ func (e *Encoder) Encode(msg interface{}) error {
 	defer e.mu.Unlock()
 
 	e.pMaps = []*pMap{}
+	e.pMapIndex = 0
+	e.writers = []*writer{}
+	e.writerIndex = 0
 
 	e.log("// ----- new message start ----- //\n")
 	e.msg = newMsg(msg)
@@ -82,6 +79,7 @@ func (e *Encoder) Encode(msg interface{}) error {
 	}
 
 	e.acceptPMap()
+	e.addWriter()
 	e.log("template = ", e.tid)
 	e.log("\n  encoding -> ")
 	e.acceptTemplateID(uint32(e.tid))
@@ -95,51 +93,47 @@ func (e *Encoder) Encode(msg interface{}) error {
 }
 
 func (e *Encoder) writePMap() {
-	e.writer.WritePMap(e.pMaps[e.index])
-}
-
-func (e *Encoder) writeTmp() {
-	e.writer.WriteTo(e.tmp)
-	e.writer.Reset()
-}
-
-func (e *Encoder) writeChunk() {
-	e.writer.WriteTo(e.chunk)
-	e.writer.Reset()
+	if e.pMaps[e.pMapIndex].bitmap != 0 {
+		e.writers[e.writerIndex].WritePMap(e.pMaps[e.pMapIndex])
+	}
 }
 
 func (e *Encoder) acceptPMap() {
-	m := &pMap{mask: 128}
+	m := &pMap{mask: defaultMask}
 
 	if len(e.pMaps) > 0 {
-		e.index++
+		e.pMapIndex++
 	}
 
 	e.pMaps = append(e.pMaps, m)
 }
 
 func (e *Encoder) restorePMap() {
-	e.pMaps = e.pMaps[:e.index]
-	e.index--
+	e.pMaps = e.pMaps[:e.pMapIndex]
+	e.pMapIndex--
+}
+
+func (e *Encoder) addWriter() {
+	if e.logger != nil {
+		e.writers = append(e.writers, newWriter(e.logger, wrapWriterLog(e.logger.log)))
+	} else {
+		e.writers = append(e.writers, newWriter(&bytes.Buffer{}, &bytes.Buffer{}))
+	}
+	e.writerIndex = len(e.writers) -1
 }
 
 func (e *Encoder) commit() error {
 	tmp := &bytes.Buffer{}
-	e.writer.WriteTo(tmp)
-	e.tmp.WriteTo(tmp)
-	e.chunk.WriteTo(tmp)
-
+	for _, writer := range e.writers {
+		writer.WriteTo(tmp)
+	}
 	tmp.WriteTo(e.target)
-
-	e.writer.Reset()
-	e.tmp.Reset()
-	e.chunk.Reset()
 	return nil
 }
 
 func (e *Encoder) acceptTemplateID(id uint32) {
-	e.pMaps[e.index].SetNextBit(true)
-	e.writer.WriteUint32(false, id)
+	e.pMaps[e.pMapIndex].SetNextBit(true)
+	e.writers[e.writerIndex].WriteUint32(false, id)
 }
 
 func (e *Encoder) encodeSegment(instructions []*Instruction) {
@@ -156,11 +150,12 @@ func (e *Encoder) encodeSegment(instructions []*Instruction) {
 			e.msg.Get(field)
 			e.log("\n", instruction.Name, " = ", field.value, "\n")
 			e.log("  encoding -> ")
-			instruction.inject(e.writer, e.storage, e.pMaps[e.index], field.value)
+			instruction.inject(e.writers[e.writerIndex], e.storage, e.pMaps[e.pMapIndex], field.value)
 		}
 	}
-	e.log("\npmap = ", e.pMaps[e.index], "\n")
+	e.log("\npmap = ", e.pMaps[e.pMapIndex], "\n")
 	e.log("  encoding -> ")
+
 	e.writePMap()
 }
 
@@ -177,27 +172,23 @@ func (e *Encoder) encodeSequence(instruction *Instruction) {
 	e.log("\nsequence start: ")
 	e.log("\n  length = ", length, "\n")
 	e.log("    encoding -> ")
-	instruction.Instructions[0].inject(e.writer, e.storage, e.pMaps[e.index], uint32(length))
+	instruction.Instructions[0].inject(e.writers[e.writerIndex], e.storage, e.pMaps[e.pMapIndex], uint32(length))
 
-	e.writeTmp()
+	current := e.writerIndex // remember current writer index
 	for i:=0; i<length; i++ {
 		parent.num = i
 		e.log("\n  sequence elem[", i, "] start: ")
 
-		if instruction.pMapSize > 0 {
-			e.acceptPMap()
-		}
+		e.acceptPMap()
+		e.addWriter()
 
 		e.msg.Lock(parent)
 		e.encodeSegment(instruction.Instructions[1:])
 		e.msg.Unlock()
 
-		e.writeChunk()
-
-		if instruction.pMapSize > 0 {
-			e.restorePMap()
-		}
+		e.restorePMap()
 	}
+	e.writerIndex = current // restore index
 }
 
 func (e *Encoder) log(param ...interface{}) {
