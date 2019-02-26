@@ -109,6 +109,8 @@ func (i *Instruction) write(writer *writer, value interface{}) (err error) {
 	}
 
 	switch i.Type {
+	case TypeByteVector:
+		err = writer.WriteByteVector(i.isNullable(), value.([]byte))
 	case TypeUint32, TypeLength:
 		err = writer.WriteUint32(i.isNullable(), value.(uint32))
 	case TypeUint64:

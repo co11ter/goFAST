@@ -154,6 +154,15 @@ func (w *writer) WriteInt64(nullable bool, value int64) error {
 	return w.writeInt(nullable, value, 9)
 }
 
+func (w *writer) WriteByteVector(nullable bool, value []byte) (err error) {
+	err = w.WriteUint32(nullable, uint32(len(value)))
+	if err != nil {
+		return
+	}
+	_, err = w.dataBuf.Write(value)
+	return
+}
+
 // TODO
 func (w *writer) WriteUnicodeString(nullable bool, value string) error {
 	return nil
