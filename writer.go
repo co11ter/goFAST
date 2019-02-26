@@ -163,11 +163,6 @@ func (w *writer) WriteByteVector(nullable bool, value []byte) (err error) {
 	return
 }
 
-// TODO
-func (w *writer) WriteUnicodeString(nullable bool, value string) error {
-	return nil
-}
-
 func (w *writer) WriteASCIIString(nullable bool, value string) (err error) {
 	if len(value) == 0 {
 		if nullable {

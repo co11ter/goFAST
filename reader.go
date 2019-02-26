@@ -201,11 +201,6 @@ func (r *reader) ReadByteVector(nullable bool) (*[]byte, error) {
 	return &result, nil
 }
 
-// TODO
-func (r *reader) ReadUnicodeString(nullable bool) (*string, error) {
-	return nil, nil
-}
-
 func (r *reader) ReadASCIIString(nullable bool) (*string, error) {
 	var err error
 	r.last, err = r.reader.ReadByte()

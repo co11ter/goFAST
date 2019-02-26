@@ -115,8 +115,10 @@ func (i *Instruction) write(writer *writer, value interface{}) (err error) {
 		err = writer.WriteUint32(i.isNullable(), value.(uint32))
 	case TypeUint64:
 		err = writer.WriteUint64(i.isNullable(), value.(uint64))
-	case TypeString:
+	case TypeAsciiString:
 		err = writer.WriteASCIIString(i.isNullable(), value.(string))
+	case TypeUnicodeString:
+		err = writer.WriteByteVector(i.isNullable(), []byte(value.(string)))
 	case TypeInt64, TypeMantissa:
 		err = writer.WriteInt64(i.isNullable(), value.(int64))
 	case TypeInt32, TypeExponent:
@@ -224,13 +226,21 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 		if tmp != nil {
 			result = *tmp
 		}
-	case TypeString:
+	case TypeAsciiString:
 		tmp, err := reader.ReadASCIIString(i.isNullable())
 		if err != nil {
 			return result, err
 		}
 		if tmp != nil {
 			result = *tmp
+		}
+	case TypeUnicodeString:
+		tmp, err := reader.ReadByteVector(i.isNullable())
+		if err != nil {
+			return result, err
+		}
+		if tmp != nil {
+			result = string(*tmp)
 		}
 	case TypeInt64, TypeMantissa:
 		tmp, err := reader.ReadInt64(i.isNullable())

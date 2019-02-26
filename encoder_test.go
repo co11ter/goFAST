@@ -53,3 +53,7 @@ func TestSequenceEncode(t *testing.T) {
 func TestByteVectorEncode(t *testing.T) {
 	encode(&byteVectorMessage1, byteVectorData1, t)
 }
+
+func TestStringEncode(t *testing.T) {
+	encode(&stringMessage1, stringData1, t)
+}

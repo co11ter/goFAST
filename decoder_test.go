@@ -59,3 +59,8 @@ func TestByteVectorDecode(t *testing.T) {
 	var msg byteVectorType
 	decode(byteVectorData1, &msg, &byteVectorMessage1, t)
 }
+
+func TestStringDecode(t *testing.T) {
+	var msg stringType
+	decode(stringData1, &msg, &stringMessage1, t)
+}

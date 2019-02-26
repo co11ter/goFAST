@@ -13,16 +13,16 @@ import (
 const (
 	tagTemplate = "template"
 
-	tagString   = "string"
-	tagInt32    = "int32"
-	tagUint32   = "uInt32"
-	tagInt64    = "int64"
-	tagUint64   = "uInt64"
-	tagDecimal  = "decimal"
-	tagSequence = "sequence"
-	tagLength   = "length"
-	tagExponent = "exponent"
-	tagMantissa = "mantissa"
+	tagString     = "string"
+	tagInt32      = "int32"
+	tagUint32     = "uInt32"
+	tagInt64      = "int64"
+	tagUint64     = "uInt64"
+	tagDecimal    = "decimal"
+	tagSequence   = "sequence"
+	tagLength     = "length"
+	tagExponent   = "exponent"
+	tagMantissa   = "mantissa"
 	tagByteVector = "byteVector"
 
 	tagIncrement = "increment"
@@ -36,9 +36,11 @@ const (
 	attrName     = "name"
 	attrPresence = "presence"
 	attrValue    = "value"
+	attrCharset  = "charset"
 
 	valueMandatory = "mandatory"
 	valueOptional  = "optional"
+	valueUnicode   = "unicode"
 )
 
 // InstructionType specifies the basic encoding of the field.
@@ -57,7 +59,8 @@ const (
 	TypeInt32
 	TypeUint64
 	TypeInt64
-	TypeString
+	TypeAsciiString
+	TypeUnicodeString
 	TypeSequence
 	TypeDecimal
 	TypeLength
@@ -244,7 +247,7 @@ func newInstruction(token *xml.StartElement) *Instruction {
 
 	switch token.Name.Local {
 	case tagString:
-		instruction.Type = TypeString
+		instruction.Type = TypeAsciiString
 	case tagInt32:
 		instruction.Type = TypeInt32
 	case tagInt64:
@@ -286,6 +289,10 @@ func newInstruction(token *xml.StartElement) *Instruction {
 			if attr.Value == valueOptional {
 				instruction.Presence = PresenceOptional
 			}
+		case attrCharset:
+			if attr.Value == valueUnicode {
+				instruction.Type = TypeUnicodeString
+			}
 		}
 	}
 
@@ -315,7 +322,7 @@ func newValue(token *xml.StartElement, typ InstructionType) interface{} {
 	for _, attr := range token.Attr {
 		if attr.Name.Local == attrValue {
 			switch typ {
-			case TypeString:
+			case TypeAsciiString, TypeUnicodeString:
 				return attr.Value
 			case TypeUint64:
 				value, err := strconv.ParseUint(attr.Value, 10, 64)
