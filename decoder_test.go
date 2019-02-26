@@ -46,16 +46,16 @@ func decode(data []byte, msg interface{}, expect interface{}, t *testing.T) {
 }
 
 func TestDecimalDecode(t *testing.T) {
-	var msg decimal
+	var msg decimalType
 	decode(decimalData1, &msg, &decimalMessage1, t)
 }
 
 func TestSequenceDecode(t *testing.T) {
-	var msg sequence
+	var msg sequenceType
 	decode(sequenceData1, &msg, &sequenceMessage1, t)
 }
 
 func TestByteVectorDecode(t *testing.T) {
-	var msg byteVector
+	var msg byteVectorType
 	decode(byteVectorData1, &msg, &byteVectorMessage1, t)
 }

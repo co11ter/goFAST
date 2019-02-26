@@ -4,7 +4,7 @@
 
 package fast_test
 
-type decimal struct {
+type decimalType struct {
 	TemplateID           uint `fast:"*"`
 	CopyDecimal          float64
 	MandatoryDecimal     float64
@@ -12,7 +12,7 @@ type decimal struct {
 	IndividualDecimalOpt float64
 }
 
-type sequence struct {
+type sequenceType struct {
 	TemplateID uint `fast:"*"`
 	TestData uint32
 	OuterSequence []struct {
@@ -23,15 +23,23 @@ type sequence struct {
 	}
 }
 
-type byteVector struct {
+type byteVectorType struct {
 	TemplateID uint `fast:"*"`
 	MandatoryVector []byte
 	OptionalVector []byte
 }
 
+type stringType struct {
+	TemplateID uint `fast:"*"`
+	MandatoryAscii string
+	OptionalAscii string
+	MandatoryUnicode string
+	OptionalUnicode string
+}
+
 var (
 	decimalData1    = []byte{0xf8, 0x81, 0xfe, 0x4, 0x83, 0xff, 0xc, 0x8a, 0xfc, 0xa0, 0xff, 0x0, 0xef}
-	decimalMessage1 = decimal{
+	decimalMessage1 = decimalType{
 		TemplateID:           1,
 		CopyDecimal:          5.15,
 		MandatoryDecimal:     154.6,
@@ -40,7 +48,7 @@ var (
 	}
 
 	sequenceData1 = []byte{0xc0, 0x82, 0x81, 0x81, 0x82, 0x83, 0x83, 0x84}
-	sequenceMessage1 = sequence{
+	sequenceMessage1 = sequenceType{
 		TemplateID: 2,
 		TestData: 1,
 		OuterSequence: []struct{
@@ -62,9 +70,18 @@ var (
 	}
 
 	byteVectorData1 = []byte{0xc0, 0x83, 0x81, 0xc1, 0x82, 0xb3}
-	byteVectorMessage1 = byteVector{
+	byteVectorMessage1 = byteVectorType{
 		TemplateID: 3,
 		MandatoryVector: []byte{0xc1},
 		OptionalVector: []byte{0xb3},
+	}
+
+	stringData1 = []byte{0xc0, 0x84, 0x61, 0x62, 0xe3, 0x64, 0x65, 0xe6, 0x83, 0x67, 0x68, 0x69, 0x84, 0x6b, 0x6c, 0x6d}
+	stringMessage1 = stringType{
+		TemplateID: 4,
+		MandatoryAscii: "abc",
+		OptionalAscii: "def",
+		MandatoryUnicode: "ghi",
+		OptionalUnicode: "klm",
 	}
 )

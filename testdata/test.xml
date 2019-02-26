@@ -37,4 +37,11 @@
         <byteVector name="MandatoryVector" id="1"></byteVector>
         <byteVector name="OptionalVector" id="2" presence="optional"></byteVector>
     </template>
+
+    <template name="String" id="4" xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+        <string name="MandatoryAscii" id="1"></string>
+        <string name="OptionalAscii" id="2" presence="optional"></string>
+        <string name="MandatoryUnicode" id="3" charset="unicode"></string>
+        <string name="OptionalUnicode" id="4" presence="optional" charset="unicode"></string>
+    </template>
 </templates>
