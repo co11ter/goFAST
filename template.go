@@ -23,6 +23,7 @@ const (
 	tagLength   = "length"
 	tagExponent = "exponent"
 	tagMantissa = "mantissa"
+	tagByteVector = "byteVector"
 
 	tagIncrement = "increment"
 	tagConstant  = "constant"
@@ -62,6 +63,7 @@ const (
 	TypeLength
 	TypeExponent
 	TypeMantissa
+	TypeByteVector
 
 	OperatorNone InstructionOperator = iota
 	OperatorConstant
@@ -261,6 +263,8 @@ func newInstruction(token *xml.StartElement) *Instruction {
 		instruction.Type = TypeExponent
 	case tagMantissa:
 		instruction.Type = TypeMantissa
+	case tagByteVector:
+		instruction.Type = TypeByteVector
 	default:
 		instruction.Type = TypeNull
 	}

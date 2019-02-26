@@ -166,7 +166,7 @@ func parseType(rt reflect.Type, tagMap map[string]int) {
 
 		tagMap[name] = i
 
-		if field.Type.Kind() == reflect.Slice {
+		if field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Struct {
 			parseType(field.Type.Elem(), tagMap)
 		}
 	}

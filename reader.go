@@ -185,6 +185,22 @@ func (r *reader) ReadUint64(nullable bool) (*uint64, error) {
 	return &result, nil
 }
 
+func (r *reader) ReadByteVector(nullable bool) (*[]byte, error) {
+	length, err := r.ReadUint32(nullable)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []byte
+	for *length > 0 {
+		r.last, err = r.reader.ReadByte()
+		result = append(result, r.last)
+		*length--
+	}
+
+	return &result, nil
+}
+
 // TODO
 func (r *reader) ReadUnicodeString(nullable bool) (*string, error) {
 	return nil, nil

@@ -198,6 +198,14 @@ func (i *Instruction) extract(reader *reader, s storage, pmap *pMap) (result int
 
 func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 	switch i.Type {
+	case TypeByteVector:
+		tmp, err := reader.ReadByteVector(i.isNullable())
+		if err != nil {
+			return result, err
+		}
+		if tmp != nil {
+			result = *tmp
+		}
 	case TypeUint32, TypeLength:
 		tmp, err := reader.ReadUint32(i.isNullable())
 		if err != nil {
