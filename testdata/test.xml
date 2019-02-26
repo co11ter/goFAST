@@ -32,4 +32,9 @@
             </sequence>
         </sequence>
     </template>
+
+    <template name="ByteVector" id="3" xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+        <byteVector name="MandatoryVector" id="1"></byteVector>
+        <byteVector name="OptionalVector" id="2" presence="optional"></byteVector>
+    </template>
 </templates>

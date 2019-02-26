@@ -23,6 +23,12 @@ type sequence struct {
 	}
 }
 
+type byteVector struct {
+	TemplateID uint `fast:"*"`
+	MandatoryVector []byte
+	OptionalVector []byte
+}
+
 var (
 	decimalData1    = []byte{0xf8, 0x81, 0xfe, 0x4, 0x83, 0xff, 0xc, 0x8a, 0xfc, 0xa0, 0xff, 0x0, 0xef}
 	decimalMessage1 = decimal{
@@ -53,5 +59,12 @@ var (
 				},
 			},
 		},
+	}
+
+	byteVectorData1 = []byte{0xc0, 0x83, 0x81, 0xc1, 0x82, 0xb3}
+	byteVectorMessage1 = byteVector{
+		TemplateID: 3,
+		MandatoryVector: []byte{0xc1},
+		OptionalVector: []byte{0xb3},
 	}
 )

@@ -53,5 +53,9 @@ func TestDecimalDecode(t *testing.T) {
 func TestSequenceDecode(t *testing.T) {
 	var msg sequence
 	decode(sequenceData1, &msg, &sequenceMessage1, t)
+}
 
+func TestByteVectorDecode(t *testing.T) {
+	var msg byteVector
+	decode(byteVectorData1, &msg, &byteVectorMessage1, t)
 }

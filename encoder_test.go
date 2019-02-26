@@ -49,3 +49,7 @@ func TestDecimalEncode(t *testing.T) {
 func TestSequenceEncode(t *testing.T) {
 	encode(&sequenceMessage1, sequenceData1, t)
 }
+
+func TestByteVectorEncode(t *testing.T) {
+	encode(&byteVectorMessage1, byteVectorData1, t)
+}
