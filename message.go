@@ -43,7 +43,11 @@ func (m *message) Lock(field *field) bool {
 		return false
 	}
 
-	m.values = append(m.values, v.Index(field.num).Addr())
+	if v.Kind() == reflect.Slice {
+		m.values = append(m.values, v.Index(field.num).Addr())
+	} else {
+		m.values = append(m.values, v.Addr())
+	}
 	m.index++
 	return true
 }
@@ -165,6 +169,10 @@ func parseType(rt reflect.Type, tagMap map[string]int) {
 		}
 
 		tagMap[name] = i
+
+		if field.Type.Kind() == reflect.Struct {
+			parseType(field.Type, tagMap)
+		}
 
 		if field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Struct {
 			parseType(field.Type.Elem(), tagMap)

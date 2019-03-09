@@ -20,6 +20,7 @@ const (
 	tagUint64     = "uInt64"
 	tagDecimal    = "decimal"
 	tagSequence   = "sequence"
+	tagGroup      = "group"
 	tagLength     = "length"
 	tagExponent   = "exponent"
 	tagMantissa   = "mantissa"
@@ -62,6 +63,7 @@ const (
 	TypeAsciiString
 	TypeUnicodeString
 	TypeSequence
+	TypeGroup
 	TypeDecimal
 	TypeLength
 	TypeExponent
@@ -125,7 +127,7 @@ func (p *xmlParser) Parse() (templates []*Template) {
 
 func (p *xmlParser) postProcessing(instructions []*Instruction) {
 	for _, item := range instructions {
-		if item.Type != TypeSequence {
+		if item.Type != TypeSequence && item.Type != TypeGroup {
 			continue
 		}
 
@@ -189,15 +191,16 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
 		}
 
 		if start, ok := token.(xml.StartElement); ok {
-			if instruction.Type == TypeSequence {
+			switch instruction.Type {
+			case TypeSequence, TypeGroup:
 				inner := p.parseInstruction(&start)
 				instruction.Instructions = append(instruction.Instructions, inner)
 				if inner.Type == TypeLength && instruction.Presence == PresenceOptional {
 					inner.Presence = PresenceOptional
 				}
-			} else if instruction.Type == TypeDecimal {
+			case TypeDecimal:
 				p.parseDecimalInstructionOrOperator(&start, instruction)
-			} else {
+			default:
 				instruction.Operator, instruction.Value = p.parseOperation(&start, instruction.Type)
 			}
 		}
@@ -260,6 +263,8 @@ func newInstruction(token *xml.StartElement) *Instruction {
 		instruction.Type = TypeDecimal
 	case tagSequence:
 		instruction.Type = TypeSequence
+	case tagGroup:
+		instruction.Type = TypeGroup
 	case tagLength:
 		instruction.Type = TypeLength
 	case tagExponent:

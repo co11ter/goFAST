@@ -121,6 +121,35 @@ func (d *Decoder) visitTemplateID() uint {
 	return 0
 }
 
+func (d *Decoder) decodeGroup(instruction *Instruction) {
+	d.log("group start: ")
+
+	if instruction.isOptional() && !d.pMaps[d.index].IsNextBitSet() {
+		d.log("group is empty")
+		return
+	}
+
+	parent := &field{
+		id: instruction.ID,
+		name: instruction.Name,
+		templateID: d.tid,
+	}
+
+	if instruction.pMapSize > 0 {
+		d.log("pmap decoding: ")
+		d.visitPMap()
+		d.log("  pmap = ", *d.pMaps[d.index])
+	}
+
+	d.msg.Lock(parent)
+	d.decodeSegment(instruction.Instructions)
+	d.msg.Unlock()
+
+	if instruction.pMapSize > 0 {
+		d.restorePMap()
+	}
+}
+
 func (d *Decoder) decodeSequence(instruction *Instruction) {
 	d.log("sequence start: ")
 
@@ -166,9 +195,12 @@ func (d *Decoder) decodeSegment(instructions []*Instruction) {
 
 	var err error
 	for _, instruction := range instructions {
-		if instruction.Type == TypeSequence {
+		switch instruction.Type {
+		case TypeSequence:
 			d.decodeSequence(instruction)
-		} else {
+		case TypeGroup:
+			d.decodeGroup(instruction)
+		default:
 			d.log("decoding: ", instruction.Name)
 			d.log("  pmap -> ", d.pMaps[d.index])
 			d.log("  reader -> ")
