@@ -53,7 +53,10 @@ func ExampleDecoder_Decode() {
 		reader,
 		tpls...,
 	)
-	decoder.Decode(&msg)
+
+	if err := decoder.Decode(&msg); err != nil {
+		panic(err)
+	}
 	fmt.Print(msg)
 }
 
@@ -100,9 +103,9 @@ func ExampleEncoder_Encode() {
 
 	tpls := fast.ParseXMLTemplate(strings.NewReader(xmlData))
 	encoder := fast.NewEncoder(&buf, tpls...)
+
 	if err := encoder.Encode(&msg); err != nil {
 		panic(err)
 	}
-
 	fmt.Printf("%x", buf.Bytes())
 }
