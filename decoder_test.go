@@ -64,3 +64,8 @@ func TestStringDecode(t *testing.T) {
 	var msg stringType
 	decode(stringData1, &msg, &stringMessage1, t)
 }
+
+func TestIntegerDecode(t *testing.T) {
+	var msg IntegerType
+	decode(integerData1, &msg, &integerMessage1, t)
+}

@@ -44,4 +44,15 @@
         <string name="MandatoryUnicode" id="3" charset="unicode"></string>
         <string name="OptionalUnicode" id="4" presence="optional" charset="unicode"></string>
     </template>
+
+    <template name="Integer" id="5" xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+        <uInt32 name="MandatoryUint32" id="1" />
+        <uInt32 name="OptionalUint32" id="2" presence="optional" />
+        <uInt64 name="MandatoryUint64" id="3" />
+        <uInt64 name="OptionalUint64" id="4" presence="optional" />
+        <int32 name="MandatoryInt32" id="5" />
+        <int32 name="OptionalInt32" id="6" presence="optional" />
+        <int64 name="MandatoryInt64" id="7" />
+        <int64 name="OptionalInt64" id="8" presence="optional" />
+    </template>
 </templates>

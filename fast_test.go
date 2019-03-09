@@ -13,28 +13,40 @@ type decimalType struct {
 }
 
 type sequenceType struct {
-	TemplateID uint `fast:"*"`
-	TestData uint32
+	TemplateID    uint `fast:"*"`
+	TestData      uint32
 	OuterSequence []struct {
 		OuterTestData uint32
-		InnerSequence []struct{
+		InnerSequence []struct {
 			InnerTestData uint32
 		}
 	}
 }
 
 type byteVectorType struct {
-	TemplateID uint `fast:"*"`
+	TemplateID      uint `fast:"*"`
 	MandatoryVector []byte
-	OptionalVector []byte
+	OptionalVector  []byte
 }
 
 type stringType struct {
-	TemplateID uint `fast:"*"`
-	MandatoryAscii string
-	OptionalAscii string
+	TemplateID       uint `fast:"*"`
+	MandatoryAscii   string
+	OptionalAscii    string
 	MandatoryUnicode string
-	OptionalUnicode string
+	OptionalUnicode  string
+}
+
+type IntegerType struct {
+	TemplateID      uint `fast:"*"`
+	MandatoryUint32 uint32
+	OptionalUint32  uint32
+	MandatoryUint64 uint64
+	OptionalUint64  uint64
+	MandatoryInt32  int32
+	OptionalInt32   int32
+	MandatoryInt64  int64
+	OptionalInt64   int64
 }
 
 var (
@@ -47,19 +59,19 @@ var (
 		IndividualDecimalOpt: 11.1,
 	}
 
-	sequenceData1 = []byte{0xc0, 0x82, 0x81, 0x81, 0x82, 0x83, 0x83, 0x84}
+	sequenceData1    = []byte{0xc0, 0x82, 0x81, 0x81, 0x82, 0x83, 0x83, 0x84}
 	sequenceMessage1 = sequenceType{
 		TemplateID: 2,
-		TestData: 1,
-		OuterSequence: []struct{
+		TestData:   1,
+		OuterSequence: []struct {
 			OuterTestData uint32
-			InnerSequence []struct{
+			InnerSequence []struct {
 				InnerTestData uint32
 			}
 		}{
 			{
 				OuterTestData: 2,
-				InnerSequence: []struct{
+				InnerSequence: []struct {
 					InnerTestData uint32
 				}{
 					{InnerTestData: 3},
@@ -69,19 +81,32 @@ var (
 		},
 	}
 
-	byteVectorData1 = []byte{0xc0, 0x83, 0x81, 0xc1, 0x82, 0xb3}
+	byteVectorData1    = []byte{0xc0, 0x83, 0x81, 0xc1, 0x82, 0xb3}
 	byteVectorMessage1 = byteVectorType{
-		TemplateID: 3,
+		TemplateID:      3,
 		MandatoryVector: []byte{0xc1},
-		OptionalVector: []byte{0xb3},
+		OptionalVector:  []byte{0xb3},
 	}
 
-	stringData1 = []byte{0xc0, 0x84, 0x61, 0x62, 0xe3, 0x64, 0x65, 0xe6, 0x83, 0x67, 0x68, 0x69, 0x84, 0x6b, 0x6c, 0x6d}
+	stringData1    = []byte{0xc0, 0x84, 0x61, 0x62, 0xe3, 0x64, 0x65, 0xe6, 0x83, 0x67, 0x68, 0x69, 0x84, 0x6b, 0x6c, 0x6d}
 	stringMessage1 = stringType{
-		TemplateID: 4,
-		MandatoryAscii: "abc",
-		OptionalAscii: "def",
+		TemplateID:       4,
+		MandatoryAscii:   "abc",
+		OptionalAscii:    "def",
 		MandatoryUnicode: "ghi",
-		OptionalUnicode: "klm",
+		OptionalUnicode:  "klm",
+	}
+
+	integerData1    = []byte{0xc0, 0x85, 0x83, 0x85, 0x25, 0x20, 0x2f, 0x47, 0xfe, 0x25, 0x20, 0x2f, 0x48, 0x80, 0x85, 0x87, 0x8, 0x23, 0x51, 0x57, 0x8d, 0x8, 0x23, 0x51, 0x57, 0x8f}
+	integerMessage1 = IntegerType{
+		TemplateID:      5,
+		MandatoryUint32: 3,
+		OptionalUint32:  4,
+		MandatoryUint64: 9999999998,
+		OptionalUint64:  9999999999,
+		MandatoryInt32:  5,
+		OptionalInt32:   6,
+		MandatoryInt64:  2222222221,
+		OptionalInt64:   2222222222,
 	}
 )

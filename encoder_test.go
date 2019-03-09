@@ -57,3 +57,7 @@ func TestByteVectorEncode(t *testing.T) {
 func TestStringEncode(t *testing.T) {
 	encode(&stringMessage1, stringData1, t)
 }
+
+func TestIntegerEncode(t *testing.T) {
+	encode(&integerMessage1, integerData1, t)
+}
