@@ -55,4 +55,14 @@
         <int64 name="MandatoryInt64" id="7" />
         <int64 name="OptionalInt64" id="8" presence="optional" />
     </template>
+
+    <template name="Group" id="6" xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+        <uInt32 name="TestData" id="1"/>
+        <group name="OuterGroup">
+            <uInt32 name="OuterTestData" id="2"/>
+            <group name="InnerGroup" presence="optional">
+                <uInt32 name="InnerTestData" id="3"/>
+            </group>
+        </group>
+    </template>
 </templates>

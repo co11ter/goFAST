@@ -66,6 +66,11 @@ func TestStringDecode(t *testing.T) {
 }
 
 func TestIntegerDecode(t *testing.T) {
-	var msg IntegerType
+	var msg integerType
 	decode(integerData1, &msg, &integerMessage1, t)
+}
+
+func TestGroupDecode(t *testing.T) {
+	var msg groupType
+	decode(groupData1, &msg, &groupMessage1, t)
 }

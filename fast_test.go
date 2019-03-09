@@ -37,7 +37,7 @@ type stringType struct {
 	OptionalUnicode  string
 }
 
-type IntegerType struct {
+type integerType struct {
 	TemplateID      uint `fast:"*"`
 	MandatoryUint32 uint32
 	OptionalUint32  uint32
@@ -47,6 +47,17 @@ type IntegerType struct {
 	OptionalInt32   int32
 	MandatoryInt64  int64
 	OptionalInt64   int64
+}
+
+type groupType struct {
+	TemplateID uint `fast:"*"`
+	TestData   uint32
+	OuterGroup struct {
+		OuterTestData uint32
+		InnerGroup    struct {
+			InnerTestData uint32
+		}
+	}
 }
 
 var (
@@ -98,7 +109,7 @@ var (
 	}
 
 	integerData1    = []byte{0xc0, 0x85, 0x83, 0x85, 0x25, 0x20, 0x2f, 0x47, 0xfe, 0x25, 0x20, 0x2f, 0x48, 0x80, 0x85, 0x87, 0x8, 0x23, 0x51, 0x57, 0x8d, 0x8, 0x23, 0x51, 0x57, 0x8f}
-	integerMessage1 = IntegerType{
+	integerMessage1 = integerType{
 		TemplateID:      5,
 		MandatoryUint32: 3,
 		OptionalUint32:  4,
@@ -108,5 +119,24 @@ var (
 		OptionalInt32:   6,
 		MandatoryInt64:  2222222221,
 		OptionalInt64:   2222222222,
+	}
+
+	groupData1    = []byte{0xe0, 0x86, 0x81, 0x82, 0x83}
+	groupMessage1 = groupType{
+		TemplateID: 6,
+		TestData:   1,
+		OuterGroup: struct {
+			OuterTestData uint32
+			InnerGroup    struct {
+				InnerTestData uint32
+			}
+		}{
+			OuterTestData: 2,
+			InnerGroup: struct {
+				InnerTestData uint32
+			}{
+				InnerTestData: 3,
+			},
+		},
 	}
 )
