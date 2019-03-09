@@ -11,7 +11,7 @@ Installation
 
 Install the FAST library using the "go get" command:
 
-    go get github.com/objectcomputing/mFAST
+    go get github.com/co11ter/goFAST
 
 Usage
 -----
