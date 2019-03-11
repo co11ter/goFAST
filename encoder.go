@@ -138,9 +138,12 @@ func (e *Encoder) acceptTemplateID(id uint32) {
 
 func (e *Encoder) encodeSegment(instructions []*Instruction) {
 	for _, instruction := range instructions {
-		if instruction.Type == TypeSequence {
+		switch instruction.Type {
+		case TypeSequence:
 			e.encodeSequence(instruction)
-		} else {
+		case TypeGroup:
+			e.encodeGroup(instruction)
+		default:
 			field := &field{
 				id: instruction.ID,
 				name: instruction.Name,
@@ -157,6 +160,26 @@ func (e *Encoder) encodeSegment(instructions []*Instruction) {
 	e.log("  encoding -> ")
 
 	e.writePMap()
+}
+
+func (e *Encoder) encodeGroup(instruction *Instruction) {
+	e.log("\ngroup start: ")
+	parent := &field{
+		id: instruction.ID,
+		name: instruction.Name,
+		templateID: e.tid,
+	}
+
+	current := e.writerIndex // remember current writer index
+	e.acceptPMap()
+	e.addWriter()
+
+	e.msg.Lock(parent)
+	e.encodeSegment(instruction.Instructions)
+	e.msg.Unlock()
+
+	e.restorePMap()
+	e.writerIndex = current // restore index
 }
 
 func (e *Encoder) encodeSequence(instruction *Instruction) {
