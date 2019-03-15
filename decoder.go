@@ -28,7 +28,6 @@ type Decoder struct {
 	msg *message
 
 	logger *readerLog
-	prefix string // prefix for logger
 	mu sync.Mutex
 }
 
@@ -68,9 +67,12 @@ func (d *Decoder) Decode(msg interface{}) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	d.prefix = "\n"
 	d.tid = 0
 	d.pMaps = []*pMap{}
+
+	if d.logger != nil {
+		d.logger.prefix = "\n"
+	}
 
 	d.log("// ----- new message start ----- //")
 	d.log("pmap decoding: ")
@@ -88,6 +90,7 @@ func (d *Decoder) Decode(msg interface{}) error {
 	d.msg = newMsg(msg)
 	d.msg.SetTID(d.tid)
 	d.decodeSegment(tpl.Instructions)
+	d.log("")
 
 	return nil
 }
@@ -190,8 +193,10 @@ func (d *Decoder) decodeSequence(instruction *Instruction) {
 }
 
 func (d *Decoder) decodeSegment(instructions []*Instruction) {
-	d.shift()
-	defer d.unshift()
+	if d.logger != nil {
+		d.logger.Shift()
+		defer d.logger.Unshift()
+	}
 
 	var err error
 	for _, instruction := range instructions {
@@ -219,24 +224,10 @@ func (d *Decoder) decodeSegment(instructions []*Instruction) {
 	}
 }
 
-func (d *Decoder) shift() {
-	if d.logger == nil {
-		return
-	}
-	d.prefix += "  "
-}
-
-func (d *Decoder) unshift() {
-	if d.logger == nil {
-		return
-	}
-	d.prefix = d.prefix[:len(d.prefix)-2]
-}
-
 func (d *Decoder) log(param ...interface{}) {
 	if d.logger == nil {
 		return
 	}
 
-	d.logger.Log(append([]interface{}{d.prefix}, param...)...)
+	d.logger.Log(param...)
 }

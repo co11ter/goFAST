@@ -13,14 +13,16 @@ import (
 type writerLog struct {
 	*bytes.Buffer
 	log io.Writer
+
+	prefix string // prefix for line
 }
 
 func wrapWriterLog(writer io.Writer) *writerLog {
-	return &writerLog{&bytes.Buffer{}, writer}
+	return &writerLog{&bytes.Buffer{}, writer, "\n"}
 }
 
 func (l *writerLog) Write(b []byte) (n int, err error) {
-	l.log.Write([]byte(fmt.Sprintf("%x", b)))
+	_, _ = l.log.Write([]byte(fmt.Sprintf("%x", b)))
 	return 	l.Buffer.Write(b)
 }
 
@@ -28,17 +30,27 @@ func (l *writerLog) WriteTo(w io.Writer) (n int64, err error) {
 	return l.Buffer.WriteTo(w)
 }
 
+func (l *writerLog) Shift() {
+	l.prefix += "  "
+}
+
+func (l *writerLog) Unshift() {
+	l.prefix = l.prefix[:len(l.prefix)-2]
+}
+
 func (l *writerLog) Log(param ...interface{}) {
-	l.log.Write([]byte(fmt.Sprint(param...)))
+	_, _ = l.log.Write(append([]byte(l.prefix), []byte(fmt.Sprint(param...))...))
 }
 
 type readerLog struct {
 	io.Reader
 	log io.Writer
+
+	prefix string // prefix for line
 }
 
 func wrapReaderLog(reader io.Reader, writer io.Writer) *readerLog {
-	return &readerLog{reader,writer}
+	return &readerLog{reader,writer, "\n"}
 }
 
 func (l *readerLog) Read(b []byte) (n int, err error) {
@@ -50,6 +62,14 @@ func (l *readerLog) Read(b []byte) (n int, err error) {
 	return n, err
 }
 
+func (l *readerLog) Shift() {
+	l.prefix += "  "
+}
+
+func (l *readerLog) Unshift() {
+	l.prefix = l.prefix[:len(l.prefix)-2]
+}
+
 func (l *readerLog) Log(param ...interface{}) {
-	l.log.Write([]byte(fmt.Sprint(param...)))
+	_, _ = l.log.Write(append([]byte(l.prefix), []byte(fmt.Sprint(param...))...))
 }

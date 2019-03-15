@@ -69,7 +69,11 @@ func (e *Encoder) Encode(msg interface{}) error {
 	e.writers = []*writer{}
 	e.writerIndex = 0
 
-	e.log("// ----- new message start ----- //\n")
+	if e.logger != nil {
+		e.logger.prefix = "\n"
+	}
+
+	e.log("// ----- new message start ----- //")
 	e.msg = newMsg(msg)
 	e.tid = e.msg.GetTID()
 
@@ -81,13 +85,12 @@ func (e *Encoder) Encode(msg interface{}) error {
 	e.acceptPMap()
 	e.addWriter()
 	e.log("template = ", e.tid)
-	e.log("\n  encoding -> ")
+	e.log("  encoding -> ")
 	e.acceptTemplateID(uint32(e.tid))
 
 	e.encodeSegment(tpl.Instructions)
-	e.log("\n")
 	e.commit()
-	e.log("\n")
+	e.log("")
 
 	return nil
 }
@@ -137,6 +140,11 @@ func (e *Encoder) acceptTemplateID(id uint32) {
 }
 
 func (e *Encoder) encodeSegment(instructions []*Instruction) {
+	if e.logger != nil {
+		e.logger.Shift()
+		defer e.logger.Unshift()
+	}
+
 	for _, instruction := range instructions {
 		switch instruction.Type {
 		case TypeSequence:
@@ -151,19 +159,19 @@ func (e *Encoder) encodeSegment(instructions []*Instruction) {
 			}
 
 			e.msg.Get(field)
-			e.log("\n", instruction.Name, " = ", field.value, "\n")
+			e.log(instruction.Name, " = ", field.value)
 			e.log("  encoding -> ")
 			instruction.inject(e.writers[e.writerIndex], e.storage, e.pMaps[e.pMapIndex], field.value)
 		}
 	}
-	e.log("\npmap = ", e.pMaps[e.pMapIndex], "\n")
+	e.log("pmap = ", e.pMaps[e.pMapIndex])
 	e.log("  encoding -> ")
 
 	e.writePMap()
 }
 
 func (e *Encoder) encodeGroup(instruction *Instruction) {
-	e.log("\ngroup start: ")
+	e.log("group start: ")
 	parent := &field{
 		id: instruction.ID,
 		name: instruction.Name,
@@ -192,15 +200,15 @@ func (e *Encoder) encodeSequence(instruction *Instruction) {
 	e.msg.GetLen(parent)
 	length := parent.value.(int)
 
-	e.log("\nsequence start: ")
-	e.log("\n  length = ", length, "\n")
+	e.log("sequence start: ")
+	e.log("  length = ", length)
 	e.log("    encoding -> ")
 	instruction.Instructions[0].inject(e.writers[e.writerIndex], e.storage, e.pMaps[e.pMapIndex], uint32(length))
 
 	current := e.writerIndex // remember current writer index
 	for i:=0; i<length; i++ {
 		parent.num = i
-		e.log("\n  sequence elem[", i, "] start: ")
+		e.log("sequence elem[", i, "] start: ")
 
 		e.acceptPMap()
 		e.addWriter()
