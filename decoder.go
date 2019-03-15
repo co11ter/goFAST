@@ -33,7 +33,7 @@ type Decoder struct {
 }
 
 // NewDecoder returns a new decoder that reads from reader.
-func NewDecoder(reader io.ByteReader, tmps ...*Template) *Decoder {
+func NewDecoder(reader io.Reader, tmps ...*Template) *Decoder {
 	decoder := &Decoder{
 		repo: make(map[uint]*Template),
 		storage: newStorage(),
@@ -57,7 +57,7 @@ func (d *Decoder) SetLog(writer io.Writer) {
 	}
 
 	if d.logger != nil {
-		d.reader = newReader(d.logger.ByteReader)
+		d.reader = newReader(d.logger.Reader)
 		d.logger = nil
 	}
 }

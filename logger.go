@@ -33,22 +33,21 @@ func (l *writerLog) Log(param ...interface{}) {
 }
 
 type readerLog struct {
-	io.ByteReader
+	io.Reader
 	log io.Writer
 }
 
-func wrapReaderLog(reader io.ByteReader, writer io.Writer) *readerLog {
+func wrapReaderLog(reader io.Reader, writer io.Writer) *readerLog {
 	return &readerLog{reader,writer}
 }
 
-func (l *readerLog) ReadByte() (byte, error) {
-	b, err := l.ByteReader.ReadByte()
-	if err == nil {
-		if _, err := l.log.Write([]byte(fmt.Sprintf("%x", b))); err != nil {
-			return b, err
-		}
+func (l *readerLog) Read(b []byte) (n int, err error) {
+	n, err = l.Reader.Read(b)
+	if err != nil {
+		return
 	}
-	return b, err
+	_, err = l.log.Write([]byte(fmt.Sprintf("%x", b)))
+	return n, err
 }
 
 func (l *readerLog) Log(param ...interface{}) {
