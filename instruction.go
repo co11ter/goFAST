@@ -112,24 +112,24 @@ func (i *Instruction) write(writer *writer, value interface{}) (err error) {
 	case TypeByteVector:
 		err = writer.WriteByteVector(i.isNullable(), value.([]byte))
 	case TypeUint32, TypeLength:
-		err = writer.WriteUint32(i.isNullable(), value.(uint32))
+		err = writer.WriteUint(i.isNullable(), uint64(value.(uint32)), maxSize32)
 	case TypeUint64:
-		err = writer.WriteUint64(i.isNullable(), value.(uint64))
+		err = writer.WriteUint(i.isNullable(), value.(uint64), maxSize64)
 	case TypeAsciiString:
-		err = writer.WriteASCIIString(i.isNullable(), value.(string))
+		err = writer.WriteString(i.isNullable(), value.(string))
 	case TypeUnicodeString:
 		err = writer.WriteByteVector(i.isNullable(), []byte(value.(string)))
 	case TypeInt64, TypeMantissa:
-		err = writer.WriteInt64(i.isNullable(), value.(int64))
+		err = writer.WriteInt(i.isNullable(), value.(int64), maxSize64)
 	case TypeInt32, TypeExponent:
-		err = writer.WriteInt32(i.isNullable(), value.(int32))
+		err = writer.WriteInt(i.isNullable(), int64(value.(int32)), maxSize32)
 	case TypeDecimal:
 		dec := decimal.NewFromFloat(value.(float64))
-		err = writer.WriteInt32(i.isNullable(), dec.Exponent())
+		err = writer.WriteInt(i.isNullable(), int64(dec.Exponent()), maxSize32)
 		if err != nil {
 			return
 		}
-		err = writer.WriteInt64(false, dec.Coefficient().Int64())
+		err = writer.WriteInt(false, dec.Coefficient().Int64(), maxSize64)
 	}
 	return
 }

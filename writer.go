@@ -9,6 +9,11 @@ import (
 	"io"
 )
 
+const (
+	maxSize32 = 4*8/7
+	maxSize64 = 8*8/7
+)
+
 type buffer interface {
 	io.Writer
 	io.WriterTo
@@ -28,8 +33,8 @@ func newWriter(dataBuf, pMapBuf buffer) *writer {
 }
 
 func (w *writer) WriteTo(writer io.Writer) {
-	w.pMapBuf.WriteTo(writer)
-	w.dataBuf.WriteTo(writer)
+	_, _ = w.pMapBuf.WriteTo(writer)
+	_, _ = w.dataBuf.WriteTo(writer)
 }
 
 func (w *writer) Reset() {
@@ -57,7 +62,7 @@ func (w *writer) WritePMap(m *pMap) error {
 	return err
 }
 
-func (w *writer) WriteUint32(nullable bool, value uint32) (err error) {
+func (w *writer) WriteUint(nullable bool, value uint64, size int) (err error) {
 	if !nullable && value == 0 {
 		_, err = w.dataBuf.Write([]byte{0x80})
 		return
@@ -67,45 +72,21 @@ func (w *writer) WriteUint32(nullable bool, value uint32) (err error) {
 		value++
 	}
 
-	b := make([]byte, 5)
-	i := 4
+	b := make([]byte, size+1)
+	i := size
 	for i >= 0 && value != 0 {
 		b[i] = byte(value & 0x7F)
 		value >>= 7
 		i--
 	}
 
-	b[4] |= 0x80
+	b[size] |= 0x80
 	_, err = w.dataBuf.Write(b[i+1:])
 
 	return
 }
 
-func (w *writer) WriteUint64(nullable bool, value uint64) (err error) {
-	if !nullable && value == 0 {
-		_, err = w.dataBuf.Write([]byte{0x80})
-		return
-	}
-
-	if nullable && value > 0 {
-		value++
-	}
-
-	b := make([]byte, 10)
-	i := 9
-	for i >= 0 && value != 0 {
-		b[i] = byte(value & 0x7F)
-		value >>= 7
-		i--
-	}
-
-	b[9] |= 0x80
-	_, err = w.dataBuf.Write(b[i+1:])
-
-	return
-}
-
-func (w *writer) writeInt(nullable bool, value int64, size int) (err error) {
+func (w *writer) WriteInt(nullable bool, value int64, size int) (err error) {
 	if !nullable && value == 0 {
 		_, err = w.dataBuf.Write([]byte{0x80})
 		return
@@ -146,16 +127,8 @@ func (w *writer) writeInt(nullable bool, value int64, size int) (err error) {
 	return
 }
 
-func (w *writer) WriteInt32(nullable bool, value int32) error {
-	return w.writeInt(nullable, int64(value), 4)
-}
-
-func (w *writer) WriteInt64(nullable bool, value int64) error {
-	return w.writeInt(nullable, value, 9)
-}
-
 func (w *writer) WriteByteVector(nullable bool, value []byte) (err error) {
-	err = w.WriteUint32(nullable, uint32(len(value)))
+	err = w.WriteUint(nullable, uint64(len(value)), maxSize32)
 	if err != nil {
 		return
 	}
@@ -163,7 +136,7 @@ func (w *writer) WriteByteVector(nullable bool, value []byte) (err error) {
 	return
 }
 
-func (w *writer) WriteASCIIString(nullable bool, value string) (err error) {
+func (w *writer) WriteString(nullable bool, value string) (err error) {
 	if len(value) == 0 {
 		if nullable {
 			_, err = w.dataBuf.Write([]byte{0x00})

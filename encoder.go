@@ -136,7 +136,7 @@ func (e *Encoder) commit() error {
 
 func (e *Encoder) acceptTemplateID(id uint32) {
 	e.pMaps[e.pMapIndex].SetNextBit(true)
-	e.writers[e.writerIndex].WriteUint32(false, id)
+	e.writers[e.writerIndex].WriteUint(false, uint64(id), maxSize32)
 }
 
 func (e *Encoder) encodeSegment(instructions []*Instruction) {
