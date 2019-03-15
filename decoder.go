@@ -33,6 +33,7 @@ func NewDecoder(reader io.Reader, tmps ...*Template) *Decoder {
 		repo: make(map[uint]*Template),
 		storage: newStorage(),
 		reader: newReader(reader),
+		msg: newMsg(),
 	}
 	for _, t := range tmps {
 		decoder.repo[t.ID] = t
@@ -83,7 +84,7 @@ func (d *Decoder) Decode(msg interface{}) error {
 		return ErrD9
 	}
 
-	d.msg = newMsg(msg)
+	d.msg.Reset(msg)
 	d.msg.SetTID(d.tid)
 	d.decodeSegment(tpl.Instructions)
 	d.log("")

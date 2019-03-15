@@ -12,29 +12,38 @@ import (
 
 const structTag = "fast"
 
+type tagMap map[string]int
+
 type message struct {
-	tagMap map[string]int
+	currentMap tagMap
+	cache map[string]tagMap
 	values []reflect.Value
 	index int
 }
 
-func newMsg(msg interface{}) *message {
+func newMsg() *message {
+	return &message{
+		cache: make(map[string]tagMap),
+		currentMap: make(tagMap),
+	}
+}
 
+func (m *message) Reset(msg interface{}) {
 	rv := reflect.ValueOf(msg)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		panic(errors.New("message is not pointer or nil"))
 	}
 
+	m.values = []reflect.Value{rv}
 	rt := reflect.TypeOf(msg).Elem()
 
-	m := &message{
-		tagMap: make(map[string]int),
-		values: []reflect.Value{rv},
+	var ok bool
+	name := rt.PkgPath() + "." + rt.Name()
+	if m.currentMap, ok = m.cache[name]; !ok {
+		m.currentMap = make(tagMap)
+		parseType(rt, m.currentMap)
+		m.cache[name] = m.currentMap
 	}
-
-	parseType(rt, m.tagMap)
-
-	return m
 }
 
 func (m *message) Lock(field *field) bool {
@@ -105,7 +114,7 @@ func (m *message) SetLen(field *field) {
 
 // find template id in message and return
 func (m *message) GetTID() uint {
-	index, ok := m.tagMap["*"]
+	index, ok := m.currentMap["*"]
 	if !ok {
 		return 0
 	}
@@ -114,7 +123,7 @@ func (m *message) GetTID() uint {
 
 // set template id to message
 func (m *message) SetTID(tid uint) {
-	index, ok := m.tagMap["*"]
+	index, ok := m.currentMap["*"]
 	if !ok {
 		return
 	}
@@ -146,18 +155,18 @@ func (m *message) set(field reflect.Value, value reflect.Value) {
 func (m *message) lookUpIndex(field *field) *int {
 	id := strconv.Itoa(int(field.id))
 
-	if v, ok := m.tagMap[id]; ok {
+	if v, ok := m.currentMap[id]; ok {
 		return &v
 	}
 
-	if v, ok := m.tagMap[field.name]; ok {
+	if v, ok := m.currentMap[field.name]; ok {
 		return &v
 	}
 
 	return nil
 }
 
-func parseType(rt reflect.Type, tagMap map[string]int) {
+func parseType(rt reflect.Type, currentMap tagMap) {
 
 	for i := 0; i < rt.NumField(); i++ {
 
@@ -168,14 +177,14 @@ func parseType(rt reflect.Type, tagMap map[string]int) {
 			continue
 		}
 
-		tagMap[name] = i
+		currentMap[name] = i
 
 		if field.Type.Kind() == reflect.Struct {
-			parseType(field.Type, tagMap)
+			parseType(field.Type, currentMap)
 		}
 
 		if field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Struct {
-			parseType(field.Type.Elem(), tagMap)
+			parseType(field.Type.Elem(), currentMap)
 		}
 	}
 }

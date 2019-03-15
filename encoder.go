@@ -37,6 +37,7 @@ func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 		repo: make(map[uint]*Template),
 		storage: make(map[string]interface{}),
 		target: writer,
+		msg: newMsg(),
 	}
 	for _, t := range tmps {
 		encoder.repo[t.ID] = t
@@ -74,7 +75,7 @@ func (e *Encoder) Encode(msg interface{}) error {
 	}
 
 	e.log("// ----- new message start ----- //")
-	e.msg = newMsg(msg)
+	e.msg.Reset(msg)
 	e.tid = e.msg.GetTID()
 
 	tpl, ok := e.repo[e.tid]
@@ -161,7 +162,12 @@ func (e *Encoder) encodeSegment(instructions []*Instruction) {
 			e.msg.Get(field)
 			e.log(instruction.Name, " = ", field.value)
 			e.log("  encoding -> ")
-			instruction.inject(e.writers[e.writerIndex], e.storage, e.pMaps[e.pMapIndex], field.value)
+			instruction.inject(
+				e.writers[e.writerIndex],
+				e.storage,
+				e.pMaps[e.pMapIndex],
+				field.value,
+			)
 		}
 	}
 	e.log("pmap = ", e.pMaps[e.pMapIndex])
@@ -203,7 +209,12 @@ func (e *Encoder) encodeSequence(instruction *Instruction) {
 	e.log("sequence start: ")
 	e.log("  length = ", length)
 	e.log("    encoding -> ")
-	instruction.Instructions[0].inject(e.writers[e.writerIndex], e.storage, e.pMaps[e.pMapIndex], uint32(length))
+	instruction.Instructions[0].inject(
+		e.writers[e.writerIndex],
+		e.storage,
+		e.pMaps[e.pMapIndex],
+		uint32(length),
+	)
 
 	current := e.writerIndex // remember current writer index
 	for i:=0; i<length; i++ {
