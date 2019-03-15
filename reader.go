@@ -6,8 +6,11 @@ package fast
 
 import (
 	"bytes"
-	"errors"
 	"io"
+)
+
+const (
+	maxLoadBytes = (32 << (^uint(0) >> 63)) * 8 / 7 // max size of 7-th bits data
 )
 
 type reader struct {
@@ -53,44 +56,7 @@ func (r *reader) ReadPMap() (m *pMap, err error) {
 	return
 }
 
-func (r *reader) ReadInt32(nullable bool) (*int32, error) {
-	var err error
-	_, err = r.reader.Read(r.bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	var result int32
-	var decrement int32 = 1
-
-	if (r.bytes[0] & 0x40) > 0 {
-		result = int32((-1 ^ int8(0x7F)) | int8((r.bytes[0] & 0x7F)))
-		decrement = 0
-	} else {
-		result = int32(r.bytes[0] & 0x3F)
-	}
-
-	for (r.bytes[0] & 0x80) == 0 {
-		result <<= 7
-		_, err = r.reader.Read(r.bytes)
-		if err != nil {
-			return nil, err
-		}
-		result |= int32(r.bytes[0] & 0x7F);
-	}
-
-	if nullable {
-		if result == 0 {
-			return nil, err
-		} else {
-			result -= decrement
-		}
-	}
-
-	return &result, nil
-}
-
-func (r *reader) ReadInt64(nullable bool) (*int64, error) {
+func (r *reader) ReadInt(nullable bool) (*int64, error) {
 	var err error
 	_, err = r.reader.Read(r.bytes)
 	if err != nil {
@@ -127,36 +93,7 @@ func (r *reader) ReadInt64(nullable bool) (*int64, error) {
 	return &result, nil
 }
 
-func (r *reader) ReadUint32(nullable bool) (*uint32, error) {
-	var err error
-	_, err = r.reader.Read(r.bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	result := uint32(r.bytes[0] & 0x7F)
-
-	for (r.bytes[0] & 0x80) == 0 {
-		result <<= 7;
-		_, err = r.reader.Read(r.bytes)
-		if err != nil {
-			return nil, err
-		}
-		result |= uint32(r.bytes[0] & 0x7F);
-	}
-
-	if nullable {
-		if result == 0 {
-			return nil, err
-		} else {
-			result--
-		}
-	}
-
-	return &result, nil
-}
-
-func (r *reader) ReadUint64(nullable bool) (*uint64, error) {
+func (r *reader) ReadUint(nullable bool) (*uint64, error) {
 	var err error
 	_, err = r.reader.Read(r.bytes)
 	if err != nil {
@@ -186,18 +123,19 @@ func (r *reader) ReadUint64(nullable bool) (*uint64, error) {
 }
 
 func (r *reader) ReadByteVector(nullable bool) (*[]byte, error) {
-	length, err := r.ReadUint32(nullable)
+	length, err := r.ReadUint(nullable)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]byte, *length)
+	result := make([]byte, uint32(*length))
 	_, err = io.ReadFull(r.reader, result)
 
 	return &result, nil
 }
 
-func (r *reader) ReadASCIIString(nullable bool) (*string, error) {
+// read ascii string
+func (r *reader) ReadString(nullable bool) (*string, error) {
 	var err error
 	_, err = r.reader.Read(r.bytes)
 	if err != nil {
@@ -231,7 +169,7 @@ func (r *reader) ReadASCIIString(nullable bool) (*string, error) {
 				return &result, nil
 			}
 		}
-		err = errors.New("d9")
+		err = ErrR9
 		return nil, err
 	}
 

@@ -9,10 +9,6 @@ import (
 	"sync"
 )
 
-const (
-	maxLoadBytes = (32 << (^uint(0) >> 63)) * 8 / 7 // max size of 7-th bits data
-)
-
 // A Decoder reads and decodes FAST-encoded message from an io.ByteReader.
 // You may need buffered reader since decoder reads data byte by byte.
 type Decoder struct {
@@ -115,7 +111,7 @@ func (d *Decoder) restorePMap() {
 
 func (d *Decoder) visitTemplateID() uint {
 	if d.pMaps[d.index].IsNextBitSet() {
-		tmp, err := d.reader.ReadUint32(false)
+		tmp, err := d.reader.ReadUint(false)
 		if err != nil {
 			panic(err)
 		}

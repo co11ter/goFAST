@@ -211,15 +211,15 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 			result = *tmp
 		}
 	case TypeUint32, TypeLength:
-		tmp, err := reader.ReadUint32(i.isNullable())
+		tmp, err := reader.ReadUint(i.isNullable())
 		if err != nil {
 			return result, err
 		}
 		if tmp != nil {
-			result = *tmp
+			result = uint32(*tmp)
 		}
 	case TypeUint64:
-		tmp, err := reader.ReadUint64(i.isNullable())
+		tmp, err := reader.ReadUint(i.isNullable())
 		if err != nil {
 			return result, err
 		}
@@ -227,7 +227,7 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 			result = *tmp
 		}
 	case TypeAsciiString:
-		tmp, err := reader.ReadASCIIString(i.isNullable())
+		tmp, err := reader.ReadString(i.isNullable())
 		if err != nil {
 			return result, err
 		}
@@ -243,7 +243,7 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 			result = string(*tmp)
 		}
 	case TypeInt64, TypeMantissa:
-		tmp, err := reader.ReadInt64(i.isNullable())
+		tmp, err := reader.ReadInt(i.isNullable())
 		if err != nil {
 			return result, err
 		}
@@ -251,24 +251,24 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 			result = *tmp
 		}
 	case TypeInt32, TypeExponent:
-		tmp, err := reader.ReadInt32(i.isNullable())
+		tmp, err := reader.ReadInt(i.isNullable())
 		if err != nil {
 			return result, err
 		}
 		if tmp != nil {
-			result = *tmp
+			result = int32(*tmp)
 		}
 	case TypeDecimal:
-		exponent, err := reader.ReadInt32(i.isNullable())
+		exponent, err := reader.ReadInt(i.isNullable())
 		if err != nil {
 			return result, err
 		}
 		if exponent != nil {
-			mantissa, err := reader.ReadInt64(false)
+			mantissa, err := reader.ReadInt(false)
 			if err != nil {
 				return result, err
 			}
-			result, _ = decimal.New(*mantissa, *exponent).Float64()
+			result, _ = decimal.New(*mantissa, int32(*exponent)).Float64()
 		}
 	}
 
