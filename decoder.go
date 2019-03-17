@@ -16,9 +16,7 @@ type Decoder struct {
 	storage storage
 
 	tid uint // template id
-
-	pMaps []*pMap
-	index int // index for current presence map
+	pmc *pMapCollector
 
 	reader *reader
 	msg *message
@@ -34,6 +32,7 @@ func NewDecoder(reader io.Reader, tmps ...*Template) *Decoder {
 		storage: newStorage(),
 		reader: newReader(reader),
 		msg: newMsg(),
+		pmc: newPMapCollector(),
 	}
 	for _, t := range tmps {
 		decoder.repo[t.ID] = t
@@ -65,7 +64,7 @@ func (d *Decoder) Decode(msg interface{}) error {
 	defer d.mu.Unlock()
 
 	d.tid = 0
-	d.pMaps = []*pMap{}
+	d.pmc.reset()
 
 	if d.logger != nil {
 		d.logger.prefix = "\n"
@@ -74,7 +73,7 @@ func (d *Decoder) Decode(msg interface{}) error {
 	d.log("// ----- new message start ----- //")
 	d.log("pmap decoding: ")
 	d.visitPMap()
-	d.log("  pmap = ", *d.pMaps[d.index], "\ntemplate decoding: ")
+	d.log("  pmap = ", *d.pmc.active(), "\ntemplate decoding: ")
 
 	d.tid = d.visitTemplateID()
 	d.log("  template = ", d.tid)
@@ -98,20 +97,11 @@ func (d *Decoder) visitPMap() {
 		panic(err)
 	}
 
-	if len(d.pMaps) > 0 {
-		d.index++
-	}
-
-	d.pMaps = append(d.pMaps, m)
-}
-
-func (d *Decoder) restorePMap() {
-	d.pMaps = d.pMaps[:d.index]
-	d.index--
+	d.pmc.append(m)
 }
 
 func (d *Decoder) visitTemplateID() uint {
-	if d.pMaps[d.index].IsNextBitSet() {
+	if d.pmc.active().IsNextBitSet() {
 		tmp, err := d.reader.ReadUint(false)
 		if err != nil {
 			panic(err)
@@ -124,7 +114,7 @@ func (d *Decoder) visitTemplateID() uint {
 func (d *Decoder) decodeGroup(instruction *Instruction) {
 	d.log("group start: ")
 
-	if instruction.isOptional() && !d.pMaps[d.index].IsNextBitSet() {
+	if instruction.isOptional() && !d.pmc.active().IsNextBitSet() {
 		d.log("group is empty")
 		return
 	}
@@ -138,7 +128,7 @@ func (d *Decoder) decodeGroup(instruction *Instruction) {
 	if instruction.pMapSize > 0 {
 		d.log("pmap decoding: ")
 		d.visitPMap()
-		d.log("  pmap = ", *d.pMaps[d.index])
+		d.log("  pmap = ", *d.pmc.active())
 	}
 
 	d.msg.Lock(parent)
@@ -146,14 +136,14 @@ func (d *Decoder) decodeGroup(instruction *Instruction) {
 	d.msg.Unlock()
 
 	if instruction.pMapSize > 0 {
-		d.restorePMap()
+		d.pmc.restore()
 	}
 }
 
 func (d *Decoder) decodeSequence(instruction *Instruction) {
 	d.log("sequence start: ")
 
-	tmp, err := instruction.Instructions[0].extract(d.reader, d.storage, d.pMaps[d.index])
+	tmp, err := instruction.Instructions[0].extract(d.reader, d.storage, d.pmc.active())
 	if err != nil {
 		panic(err)
 	}
@@ -176,7 +166,7 @@ func (d *Decoder) decodeSequence(instruction *Instruction) {
 		if instruction.pMapSize > 0 {
 			d.log("pmap decoding: ")
 			d.visitPMap()
-			d.log("  pmap = ", *d.pMaps[d.index])
+			d.log("  pmap = ", *d.pmc.active())
 		}
 
 		d.msg.Lock(parent)
@@ -184,7 +174,7 @@ func (d *Decoder) decodeSequence(instruction *Instruction) {
 		d.msg.Unlock()
 
 		if instruction.pMapSize > 0 {
-			d.restorePMap()
+			d.pmc.restore()
 		}
 	}
 }
@@ -204,14 +194,14 @@ func (d *Decoder) decodeSegment(instructions []*Instruction) {
 			d.decodeGroup(instruction)
 		default:
 			d.log("decoding: ", instruction.Name)
-			d.log("  pmap -> ", d.pMaps[d.index])
+			d.log("  pmap -> ", d.pmc.active())
 			d.log("  reader -> ")
 			field := &field{
 				id: instruction.ID,
 				name: instruction.Name,
 				templateID: d.tid,
 			}
-			field.value, err = instruction.extract(d.reader, d.storage, d.pMaps[d.index])
+			field.value, err = instruction.extract(d.reader, d.storage, d.pmc.active())
 			if err != nil {
 				panic(err)
 			}

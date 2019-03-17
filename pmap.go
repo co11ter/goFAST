@@ -35,3 +35,42 @@ func (p *pMap) String() (res string) {
 	}
 	return
 }
+
+type pMapCollector struct {
+	data []*pMap
+	index int // index for current presence map
+}
+
+func newPMapCollector() *pMapCollector {
+	return &pMapCollector{index: -1}
+}
+
+func (c *pMapCollector) reset() {
+	c.data = c.data[:0]
+	c.index = -1
+}
+
+func (c *pMapCollector) append(m *pMap) {
+	c.data = append(c.data, m)
+	if m != nil {
+		c.index = len(c.data)-1
+	}
+}
+
+func (c *pMapCollector) restore() {
+	c.data = c.data[:len(c.data)-1]
+	if c.index >= len(c.data) && c.index > 0 {
+		c.index--
+	}
+	for c.data[c.index] == nil && c.index > 0 {
+		c.index--
+	}
+}
+
+func (c *pMapCollector) active() *pMap {
+	return c.data[c.index]
+}
+
+func (c *pMapCollector) current() *pMap {
+	return c.data[len(c.data)-1]
+}

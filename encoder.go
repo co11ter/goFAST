@@ -16,9 +16,7 @@ type Encoder struct {
 	storage storage
 
 	tid uint // template id
-
-	pMaps []*pMap
-	pMapIndex int // index for current presence map
+	pmc *pMapCollector
 
 	writers []*writer
 	writerIndex int // index for current writer
@@ -38,6 +36,7 @@ func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 		storage: make(map[string]interface{}),
 		target: writer,
 		msg: newMsg(),
+		pmc: newPMapCollector(),
 	}
 	for _, t := range tmps {
 		encoder.repo[t.ID] = t
@@ -65,8 +64,7 @@ func (e *Encoder) Encode(msg interface{}) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	e.pMaps = []*pMap{}
-	e.pMapIndex = 0
+	e.pmc.reset()
 	e.writers = []*writer{}
 	e.writerIndex = 0
 
@@ -83,7 +81,7 @@ func (e *Encoder) Encode(msg interface{}) error {
 		return ErrD9
 	}
 
-	e.acceptPMap()
+	e.pmc.append(&pMap{mask: defaultMask})
 	e.addWriter()
 	e.log("template = ", e.tid)
 	e.log("  encoding -> ")
@@ -94,27 +92,6 @@ func (e *Encoder) Encode(msg interface{}) error {
 	e.log("")
 
 	return nil
-}
-
-func (e *Encoder) writePMap() {
-	if e.pMaps[e.pMapIndex].bitmap != 0 {
-		e.writers[e.writerIndex].WritePMap(e.pMaps[e.pMapIndex])
-	}
-}
-
-func (e *Encoder) acceptPMap() {
-	m := &pMap{mask: defaultMask}
-
-	if len(e.pMaps) > 0 {
-		e.pMapIndex++
-	}
-
-	e.pMaps = append(e.pMaps, m)
-}
-
-func (e *Encoder) restorePMap() {
-	e.pMaps = e.pMaps[:e.pMapIndex]
-	e.pMapIndex--
 }
 
 func (e *Encoder) addWriter() {
@@ -136,7 +113,7 @@ func (e *Encoder) commit() error {
 }
 
 func (e *Encoder) acceptTemplateID(id uint32) {
-	e.pMaps[e.pMapIndex].SetNextBit(true)
+	e.pmc.active().SetNextBit(true)
 	e.writers[e.writerIndex].WriteUint(false, uint64(id), maxSize32)
 }
 
@@ -165,15 +142,17 @@ func (e *Encoder) encodeSegment(instructions []*Instruction) {
 			instruction.inject(
 				e.writers[e.writerIndex],
 				e.storage,
-				e.pMaps[e.pMapIndex],
+				e.pmc.active(),
 				field.value,
 			)
 		}
 	}
-	e.log("pmap = ", e.pMaps[e.pMapIndex])
+	e.log("pmap = ", e.pmc.current())
 	e.log("  encoding -> ")
 
-	e.writePMap()
+	if m := e.pmc.current(); m != nil {
+		e.writers[e.writerIndex].WritePMap(m)
+	}
 }
 
 func (e *Encoder) encodeGroup(instruction *Instruction) {
@@ -184,15 +163,25 @@ func (e *Encoder) encodeGroup(instruction *Instruction) {
 		templateID: e.tid,
 	}
 
+	if instruction.isOptional() {
+		e.pmc.active().SetNextBit(true)
+	}
+
 	current := e.writerIndex // remember current writer index
-	e.acceptPMap()
+
+	var pmap *pMap
+	if instruction.pMapSize > 0 {
+		pmap = &pMap{mask: defaultMask}
+	}
+
+	e.pmc.append(pmap)
 	e.addWriter()
 
 	e.msg.Lock(parent)
 	e.encodeSegment(instruction.Instructions)
 	e.msg.Unlock()
 
-	e.restorePMap()
+	e.pmc.restore()
 	e.writerIndex = current // restore index
 }
 
@@ -212,7 +201,7 @@ func (e *Encoder) encodeSequence(instruction *Instruction) {
 	instruction.Instructions[0].inject(
 		e.writers[e.writerIndex],
 		e.storage,
-		e.pMaps[e.pMapIndex],
+		e.pmc.active(),
 		uint32(length),
 	)
 
@@ -221,14 +210,19 @@ func (e *Encoder) encodeSequence(instruction *Instruction) {
 		parent.num = i
 		e.log("sequence elem[", i, "] start: ")
 
-		e.acceptPMap()
+		var pmap *pMap
+		if instruction.pMapSize > 0 {
+			pmap = &pMap{mask: defaultMask}
+		}
+
+		e.pmc.append(pmap)
 		e.addWriter()
 
 		e.msg.Lock(parent)
 		e.encodeSegment(instruction.Instructions[1:])
 		e.msg.Unlock()
 
-		e.restorePMap()
+		e.pmc.restore()
 	}
 	e.writerIndex = current // restore index
 }

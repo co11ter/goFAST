@@ -36,7 +36,7 @@ func encode(msg interface{}, expect []byte, t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(writer.Bytes(), expect) {
-		t.Fatal("data is not equal", writer.Bytes(), expect)
+		t.Fatal("data is not equal. current: ", writer.Bytes(), " expected: ", expect)
 	}
 
 	writer.Reset()
@@ -62,7 +62,6 @@ func TestIntegerEncode(t *testing.T) {
 	encode(&integerMessage1, integerData1, t)
 }
 
-// TODO
-/*func TestGroupEncode(t *testing.T) {
+func TestGroupEncode(t *testing.T) {
 	encode(&groupMessage1, groupData1, t)
-}*/
+}
