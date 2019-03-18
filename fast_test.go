@@ -15,9 +15,9 @@ type decimalType struct {
 type sequenceType struct {
 	TemplateID    uint `fast:"*"`
 	TestData      uint32
-	OuterSequence []struct {
-		OuterTestData uint32
-		InnerSequence []struct {
+	OuterSequence []*struct {
+		OuterTestData *uint32
+		InnerSequence *[]struct {
 			InnerTestData uint32
 		}
 	}
@@ -54,7 +54,7 @@ type groupType struct {
 	TestData   uint32
 	OuterGroup struct {
 		OuterTestData uint32
-		InnerGroup    struct {
+		InnerGroup    *struct {
 			InnerTestData uint32
 		}
 	}
@@ -70,24 +70,32 @@ var (
 		IndividualDecimalOpt: 11.1,
 	}
 
+	value uint32 = 2
+	grpSegment = struct{
+		InnerTestData uint32
+	}{
+		InnerTestData: 3,
+	}
+	secSegment = []struct {
+		InnerTestData uint32
+	}{
+		{InnerTestData: 3},
+		{InnerTestData: 4},
+	}
+
 	sequenceData1    = []byte{0xc0, 0x82, 0x81, 0x81, 0x82, 0x83, 0x83, 0x84}
 	sequenceMessage1 = sequenceType{
 		TemplateID: 2,
 		TestData:   1,
-		OuterSequence: []struct {
-			OuterTestData uint32
-			InnerSequence []struct {
+		OuterSequence: []*struct {
+			OuterTestData *uint32
+			InnerSequence *[]struct {
 				InnerTestData uint32
 			}
 		}{
 			{
-				OuterTestData: 2,
-				InnerSequence: []struct {
-					InnerTestData uint32
-				}{
-					{InnerTestData: 3},
-					{InnerTestData: 4},
-				},
+				OuterTestData: &value,
+				InnerSequence: &secSegment,
 			},
 		},
 	}
@@ -127,16 +135,12 @@ var (
 		TestData:   1,
 		OuterGroup: struct {
 			OuterTestData uint32
-			InnerGroup    struct {
+			InnerGroup *struct {
 				InnerTestData uint32
 			}
 		}{
 			OuterTestData: 2,
-			InnerGroup: struct {
-				InnerTestData uint32
-			}{
-				InnerTestData: 3,
-			},
+			InnerGroup: &grpSegment,
 		},
 	}
 )

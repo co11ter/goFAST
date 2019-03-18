@@ -53,8 +53,10 @@ func (m *message) Lock(field *field) bool {
 	}
 
 	if v.Kind() == reflect.Slice {
-		m.values = append(m.values, v.Index(field.num).Addr())
+		v = extractValue(v.Index(field.num))
+		m.values = append(m.values, v.Addr())
 	} else {
+		v = extractValue(v)
 		m.values = append(m.values, v.Addr())
 	}
 	m.index++
@@ -72,7 +74,8 @@ func (m *message) lookUpRField(field *field) (v reflect.Value, ok bool) {
 		return
 	}
 
-	v = m.values[m.index].Elem().Field(*index)
+	v = extractValue(m.values[m.index])
+	v = extractValue(v.Field(*index))
 	ok = true
 	return
 }
@@ -146,7 +149,7 @@ func (m *message) Set(field *field) {
 func (m *message) set(field reflect.Value, value reflect.Value) {
 	if field.Kind() == reflect.Ptr {
 		field.Set(reflect.New(field.Type().Elem()))
-		field.Elem().Set(reflect.ValueOf(value))
+		field.Elem().Set(value)
 		return
 	}
 	field.Set(value)
@@ -179,14 +182,38 @@ func parseType(rt reflect.Type, currentMap tagMap) {
 
 		currentMap[name] = i
 
-		if field.Type.Kind() == reflect.Struct {
-			parseType(field.Type, currentMap)
+		tmp := extractType(field.Type)
+
+		if tmp.Kind() == reflect.Struct {
+			parseType(tmp, currentMap)
 		}
 
-		if field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Struct {
-			parseType(field.Type.Elem(), currentMap)
+		// extract first element of slice
+		if tmp.Kind() == reflect.Slice {
+			tmp = extractType(tmp.Elem())
+		}
+
+		if tmp.Kind() == reflect.Struct {
+			parseType(tmp, currentMap)
 		}
 	}
+}
+
+func extractValue(rv reflect.Value) reflect.Value {
+	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			rv.Set(reflect.New(rv.Type().Elem()))
+		}
+		return rv.Elem()
+	}
+	return rv
+}
+
+func extractType(rt reflect.Type) reflect.Type {
+	if rt.Kind() == reflect.Ptr {
+		return rt.Elem()
+	}
+	return rt
 }
 
 func lookUpTag(field reflect.StructField) string {
