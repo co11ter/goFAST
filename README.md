@@ -58,7 +58,10 @@ reader := bytes.NewReader(
     []byte{0xc0, 0x81, 0x74, 0x65, 0x73, 0xf4, 0x80, 0x80, 0x81, 0x80, 0x82},
 )
 
-tpls := fast.ParseXMLTemplate(strings.NewReader(xmlData))
+tpls, err := fast.ParseXMLTemplate(strings.NewReader(xmlData))
+if err != nil {
+    panic(err)
+}
 decoder := fast.NewDecoder(
     reader,
     tpls...,
@@ -83,7 +86,10 @@ var msg = Msg{
     },
 }
 
-tpls := fast.ParseXMLTemplate(strings.NewReader(xmlData))
+tpls, err := fast.ParseXMLTemplate(strings.NewReader(xmlData))
+if err != nil {
+    panic(err)
+}
 encoder := fast.NewEncoder(&buf, tpls...)
 
 if err := encoder.Encode(&msg); err != nil {

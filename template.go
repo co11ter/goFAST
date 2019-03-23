@@ -94,7 +94,7 @@ type xmlParser struct {
 }
 
 // ParseXMLTemplate reads xml data from reader and return templates collection.
-func ParseXMLTemplate(reader io.Reader) []*Template {
+func ParseXMLTemplate(reader io.Reader) ([]*Template, error) {
 	return newXMLParser(reader).Parse()
 }
 
@@ -102,30 +102,38 @@ func newXMLParser(reader io.Reader) *xmlParser {
 	return &xmlParser{decoder: xml.NewDecoder(reader)}
 }
 
-func (p *xmlParser) Parse() (templates []*Template) {
+func (p *xmlParser) Parse() (templates []*Template, err error) {
+	var token xml.Token
+	var template *Template
 	for {
-		token, err := p.decoder.Token()
+		token, err = p.decoder.Token()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			panic(err)
+			return
 		}
 
 		if start, ok := token.(xml.StartElement); ok && start.Name.Local == tagTemplate {
-			template := p.parseTemplate(&start)
+			template, err = p.parseTemplate(&start)
+			if err != nil {
+				return
+			}
 			templates = append(templates, template)
 		}
 	}
 
 	for _, tpl := range templates {
-		p.postProcessing(tpl.Instructions)
+		err = p.postProcessing(tpl.Instructions)
+		if err != nil {
+			break
+		}
 	}
 
-	return templates
+	return
 }
 
-func (p *xmlParser) postProcessing(instructions []*Instruction) {
+func (p *xmlParser) postProcessing(instructions []*Instruction) (err error) {
 	for _, item := range instructions {
 		if item.Type != TypeSequence && item.Type != TypeGroup {
 			continue
@@ -137,21 +145,32 @@ func (p *xmlParser) postProcessing(instructions []*Instruction) {
 			}
 		}
 
-		p.postProcessing(item.Instructions)
+		err = p.postProcessing(item.Instructions)
+		if err != nil {
+			break
+		}
 	}
+
+	return
 }
 
-func (p *xmlParser) parseTemplate(token *xml.StartElement) *Template {
-	template := newTemplate(token)
+func (p *xmlParser) parseTemplate(token *xml.StartElement) (*Template, error) {
+	template, err := newTemplate(token)
+	if err != nil {
+		return nil, err
+	}
 
 	for {
 		token, err := p.decoder.Token()
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		if start, ok := token.(xml.StartElement); ok {
-			instruction := p.parseInstruction(&start)
+			instruction, err := p.parseInstruction(&start)
+			if err != nil {
+				return nil, err
+			}
 			template.Instructions = append(template.Instructions, instruction)
 		}
 
@@ -160,13 +179,20 @@ func (p *xmlParser) parseTemplate(token *xml.StartElement) *Template {
 		}
 	}
 
-	return template
+	return template, nil
 }
 
-func (p *xmlParser) parseDecimalInstructionOrOperator(token *xml.StartElement, instruction *Instruction) {
-	inner := newInstruction(token)
+func (p *xmlParser) parseDecimalInstructionOrOperator(token *xml.StartElement, instruction *Instruction) error {
+	inner, err := newInstruction(token)
+	if err != nil {
+		return err
+	}
+
 	if inner.Type != TypeNull {
-		inner = p.parseInstruction(token)
+		inner, err := p.parseInstruction(token)
+		if err != nil {
+			return err
+		}
 		inner.ID = instruction.ID
 		inner.Name = instruction.Name
 
@@ -177,32 +203,44 @@ func (p *xmlParser) parseDecimalInstructionOrOperator(token *xml.StartElement, i
 		}
 		instruction.Instructions = append(instruction.Instructions, inner)
 	} else {
-		instruction.Operator, instruction.Value = p.parseOperation(token, instruction.Type)
+		err = p.parseOperation(token, instruction)
 	}
+
+	return err
 }
 
-func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
-	instruction := newInstruction(token)
+func (p *xmlParser) parseInstruction(token *xml.StartElement) (*Instruction, error) {
+	instruction, err := newInstruction(token)
+	if err != nil {
+		return nil, err
+	}
 
 	for {
 		token, err := p.decoder.Token()
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		if start, ok := token.(xml.StartElement); ok {
 			switch instruction.Type {
 			case TypeSequence, TypeGroup:
-				inner := p.parseInstruction(&start)
+				inner, err := p.parseInstruction(&start)
+				if err != nil {
+					return nil, err
+				}
 				instruction.Instructions = append(instruction.Instructions, inner)
 				if inner.Type == TypeLength && instruction.Presence == PresenceOptional {
 					inner.Presence = PresenceOptional
 				}
 			case TypeDecimal:
-				p.parseDecimalInstructionOrOperator(&start, instruction)
+				err = p.parseDecimalInstructionOrOperator(&start, instruction)
 			default:
-				instruction.Operator, instruction.Value = p.parseOperation(&start, instruction.Type)
+				err = p.parseOperation(&start, instruction)
 			}
+		}
+
+		if err != nil {
+			return nil, err
 		}
 
 		if _, ok := token.(xml.EndElement); ok {
@@ -210,31 +248,35 @@ func (p *xmlParser) parseInstruction(token *xml.StartElement) *Instruction {
 		}
 	}
 
-	return instruction
+	return instruction, nil
 }
 
-func (p *xmlParser) parseOperation(token *xml.StartElement, typ InstructionType) (opt InstructionOperator, value interface{}) {
+func (p *xmlParser) parseOperation(token *xml.StartElement, instruction *Instruction) error {
 	switch token.Name.Local {
 	case tagConstant:
-		opt = OperatorConstant
+		instruction.Operator = OperatorConstant
 	case tagDefault:
-		opt = OperatorDefault
+		instruction.Operator = OperatorDefault
 	case tagCopy:
-		opt = OperatorCopy
+		instruction.Operator = OperatorCopy
 	case tagDelta:
-		opt = OperatorDelta
+		instruction.Operator = OperatorDelta
 	case tagIncrement:
-		opt = OperatorIncrement
+		instruction.Operator = OperatorIncrement
 	default:
-		opt = OperatorNone
+		instruction.Operator = OperatorNone
 	}
 
-	value = newValue(token, typ)
+	var err error
+	instruction.Value, err = newValue(token, instruction.Type)
+	if err != nil {
+		return err
+	}
 
 	for {
 		token, err := p.decoder.Token()
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		if _, ok := token.(xml.EndElement); ok {
@@ -242,10 +284,10 @@ func (p *xmlParser) parseOperation(token *xml.StartElement, typ InstructionType)
 		}
 	}
 
-	return
+	return nil
 }
 
-func newInstruction(token *xml.StartElement) *Instruction {
+func newInstruction(token *xml.StartElement) (*Instruction, error) {
 	instruction := &Instruction{Operator: OperatorNone}
 
 	switch token.Name.Local {
@@ -284,7 +326,7 @@ func newInstruction(token *xml.StartElement) *Instruction {
 		case attrID:
 			id, err := strconv.Atoi(attr.Value)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
 			instruction.ID = uint(id)
 		case attrPresence:
@@ -301,10 +343,10 @@ func newInstruction(token *xml.StartElement) *Instruction {
 		}
 	}
 
-	return instruction
+	return instruction, nil
 }
 
-func newTemplate(token *xml.StartElement) *Template {
+func newTemplate(token *xml.StartElement) (*Template, error) {
 	template := &Template{}
 
 	for _, attr := range token.Attr {
@@ -314,47 +356,34 @@ func newTemplate(token *xml.StartElement) *Template {
 		case attrID:
 			id, err := strconv.Atoi(attr.Value)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
 			template.ID = uint(id)
 		}
 	}
 
-	return template
+	return template, nil
 }
 
-func newValue(token *xml.StartElement, typ InstructionType) interface{} {
+func newValue(token *xml.StartElement, typ InstructionType) (value interface{}, err error) {
 	for _, attr := range token.Attr {
 		if attr.Name.Local == attrValue {
 			switch typ {
 			case TypeAsciiString, TypeUnicodeString:
-				return attr.Value
+				value = attr.Value
 			case TypeUint64:
-				value, err := strconv.ParseUint(attr.Value, 10, 64)
-				if err != nil {
-					panic(err)
-				}
-				return value
+				value, err = strconv.ParseUint(attr.Value, 10, 64)
 			case TypeUint32:
-				value, err := strconv.ParseUint(attr.Value, 10, 32)
-				if err != nil {
-					panic(err)
-				}
-				return uint32(value)
+				value, err = strconv.ParseUint(attr.Value, 10, 32)
+				value = uint32(value.(uint64))
 			case TypeInt64, TypeMantissa:
-				value, err := strconv.ParseInt(attr.Value, 10, 64)
-				if err != nil {
-					panic(err)
-				}
-				return value
+				value, err = strconv.ParseInt(attr.Value, 10, 64)
 			case TypeInt32, TypeExponent:
-				value, err := strconv.ParseInt(attr.Value, 10, 32)
-				if err != nil {
-					panic(err)
-				}
-				return int32(value)
+				value, err = strconv.ParseInt(attr.Value, 10, 32)
+				value = int32(value.(int64))
 			}
+			return
 		}
 	}
-	return nil
+	return
 }
