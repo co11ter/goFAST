@@ -87,11 +87,11 @@ func (e *Encoder) Encode(msg interface{}) error {
 	e.log("  encoding -> ")
 	e.acceptTemplateID(uint32(e.tid))
 
-	e.encodeSegment(tpl.Instructions)
-	e.commit()
-	e.log("")
-
-	return nil
+	err := e.encodeSegment(tpl.Instructions)
+	if err != nil {
+		return err
+	}
+	return e.commit()
 }
 
 func (e *Encoder) addWriter() {
@@ -108,27 +108,28 @@ func (e *Encoder) commit() error {
 	for _, writer := range e.writers {
 		writer.WriteTo(tmp)
 	}
-	tmp.WriteTo(e.target)
-	return nil
+	_, err := tmp.WriteTo(e.target)
+	return err
 }
 
 func (e *Encoder) acceptTemplateID(id uint32) {
 	e.pmc.active().SetNextBit(true)
-	e.writers[e.writerIndex].WriteUint(false, uint64(id), maxSize32)
+	_ = e.writers[e.writerIndex].WriteUint(false, uint64(id), maxSize32)
 }
 
-func (e *Encoder) encodeSegment(instructions []*Instruction) {
+func (e *Encoder) encodeSegment(instructions []*Instruction) error {
 	if e.logger != nil {
 		e.logger.Shift()
 		defer e.logger.Unshift()
 	}
 
+	var err error
 	for _, instruction := range instructions {
 		switch instruction.Type {
 		case TypeSequence:
-			e.encodeSequence(instruction)
+			err = e.encodeSequence(instruction)
 		case TypeGroup:
-			e.encodeGroup(instruction)
+			err = e.encodeGroup(instruction)
 		default:
 			field := &field{
 				id: instruction.ID,
@@ -139,23 +140,29 @@ func (e *Encoder) encodeSegment(instructions []*Instruction) {
 			e.msg.Get(field)
 			e.log(instruction.Name, " = ", field.value)
 			e.log("  encoding -> ")
-			instruction.inject(
+			err = instruction.inject(
 				e.writers[e.writerIndex],
 				e.storage,
 				e.pmc.active(),
 				field.value,
 			)
 		}
+
+		if err != nil {
+			return err
+		}
 	}
 	e.log("pmap = ", e.pmc.current())
 	e.log("  encoding -> ")
 
 	if m := e.pmc.current(); m != nil {
-		e.writers[e.writerIndex].WritePMap(m)
+		_ = e.writers[e.writerIndex].WritePMap(m)
 	}
+
+	return nil
 }
 
-func (e *Encoder) encodeGroup(instruction *Instruction) {
+func (e *Encoder) encodeGroup(instruction *Instruction) error {
 	e.log("group start: ")
 	parent := &field{
 		id: instruction.ID,
@@ -178,14 +185,18 @@ func (e *Encoder) encodeGroup(instruction *Instruction) {
 	e.addWriter()
 
 	e.msg.Lock(parent)
-	e.encodeSegment(instruction.Instructions)
+	err := e.encodeSegment(instruction.Instructions)
+	if err != nil {
+		return err
+	}
 	e.msg.Unlock()
 
 	e.pmc.restore()
 	e.writerIndex = current // restore index
+	return nil
 }
 
-func (e *Encoder) encodeSequence(instruction *Instruction) {
+func (e *Encoder) encodeSequence(instruction *Instruction) error {
 	parent := &field{
 		id: instruction.ID,
 		name: instruction.Name,
@@ -198,12 +209,15 @@ func (e *Encoder) encodeSequence(instruction *Instruction) {
 	e.log("sequence start: ")
 	e.log("  length = ", length)
 	e.log("    encoding -> ")
-	instruction.Instructions[0].inject(
+	err := instruction.Instructions[0].inject(
 		e.writers[e.writerIndex],
 		e.storage,
 		e.pmc.active(),
 		uint32(length),
 	)
+	if err != nil {
+		return err
+	}
 
 	current := e.writerIndex // remember current writer index
 	for i:=0; i<length; i++ {
@@ -219,12 +233,15 @@ func (e *Encoder) encodeSequence(instruction *Instruction) {
 		e.addWriter()
 
 		e.msg.Lock(parent)
-		e.encodeSegment(instruction.Instructions[1:])
+		err = e.encodeSegment(instruction.Instructions[1:])
+		if err != nil {
+			return err
+		}
 		e.msg.Unlock()
-
 		e.pmc.restore()
 	}
 	e.writerIndex = current // restore index
+	return nil
 }
 
 func (e *Encoder) log(param ...interface{}) {
