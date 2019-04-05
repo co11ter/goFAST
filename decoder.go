@@ -75,22 +75,27 @@ func (d *Decoder) Decode(msg interface{}) error {
 
 	if d.logger != nil {
 		d.logger.prefix = "\n"
+		d.logger.Log("// ----- new message start ----- //")
+		d.logger.Log("pmap decoding: ")
 	}
 
-	var err error
-	d.log("// ----- new message start ----- //")
-	d.log("pmap decoding: ")
-	err = d.visitPMap()
+	err := d.visitPMap()
 	if err != nil {
 		return err
 	}
-	d.log("  pmap = ", *d.pmc.active(), "\ntemplate decoding: ")
+
+	if d.logger != nil {
+		d.logger.Log("  pmap = ", *d.pmc.active(), "\ntemplate decoding: ")
+	}
 
 	d.tid, err = d.visitTemplateID()
 	if err != nil {
 		return err
 	}
-	d.log("  template = ", d.tid)
+
+	if d.logger != nil {
+		d.logger.Log("  template = ", d.tid)
+	}
 
 	tpl, ok := d.repo[d.tid]
 	if !ok {
@@ -124,10 +129,14 @@ func (d *Decoder) visitTemplateID() (uint, error) {
 }
 
 func (d *Decoder) decodeGroup(instruction *Instruction) error {
-	d.log("group start: ")
+	if d.logger != nil {
+		d.logger.Log("group start: ")
+	}
 
 	if instruction.isOptional() && !d.pmc.active().IsNextBitSet() {
-		d.log("group is empty")
+		if d.logger != nil {
+			d.logger.Log("group is empty")
+		}
 		return nil
 	}
 
@@ -138,12 +147,16 @@ func (d *Decoder) decodeGroup(instruction *Instruction) error {
 	}
 
 	if instruction.pMapSize > 0 {
-		d.log("pmap decoding: ")
+		if d.logger != nil {
+			d.logger.Log("pmap decoding: ")
+		}
 		err := d.visitPMap()
 		if err != nil {
 			return err
 		}
-		d.log("  pmap = ", *d.pmc.active())
+		if d.logger != nil {
+			d.logger.Log("  pmap = ", *d.pmc.active())
+		}
 	}
 
 	d.msg.Lock(parent)
@@ -161,14 +174,18 @@ func (d *Decoder) decodeGroup(instruction *Instruction) error {
 }
 
 func (d *Decoder) decodeSequence(instruction *Instruction) error {
-	d.log("sequence start: ")
+	if d.logger != nil {
+		d.logger.Log("sequence start: ")
+	}
 
 	tmp, err := instruction.Instructions[0].extract(d.reader, d.storage, d.pmc.active())
 	if err != nil {
 		return err
 	}
 	length := int(tmp.(uint32))
-	d.log("  length = ", length)
+	if d.logger != nil {
+		d.logger.Log("  length = ", length)
+	}
 
 	parent := &field{
 		id: instruction.ID,
@@ -181,15 +198,21 @@ func (d *Decoder) decodeSequence(instruction *Instruction) error {
 
 	for i:=0; i<length; i++ {
 		parent.num = i
-		d.log("sequence elem[", i, "] start: ")
+		if d.logger != nil {
+			d.logger.Log("sequence elem[", i, "] start: ")
+		}
 
 		if instruction.pMapSize > 0 {
-			d.log("pmap decoding: ")
+			if d.logger != nil {
+				d.logger.Log("pmap decoding: ")
+			}
 			err = d.visitPMap()
 			if err != nil {
 				return err
 			}
-			d.log("  pmap = ", *d.pmc.active())
+			if d.logger != nil {
+				d.logger.Log("  pmap = ", *d.pmc.active())
+			}
 		}
 
 		d.msg.Lock(parent)
@@ -221,9 +244,12 @@ func (d *Decoder) decodeSegment(instructions []*Instruction) error {
 		case TypeGroup:
 			err = d.decodeGroup(instruction)
 		default:
-			d.log("decoding: ", instruction.Name)
-			d.log("  pmap -> ", d.pmc.active())
-			d.log("  reader -> ")
+			if d.logger != nil {
+				d.logger.Log("decoding: ", instruction.Name)
+				d.logger.Log("  pmap -> ", d.pmc.active())
+				d.logger.Log("  reader -> ")
+			}
+
 			field := &field{
 				id: instruction.ID,
 				name: instruction.Name,
@@ -233,7 +259,11 @@ func (d *Decoder) decodeSegment(instructions []*Instruction) error {
 			if err != nil {
 				return err
 			}
-			d.log("  ", field.name, " = ", field.value)
+
+			if d.logger != nil {
+				d.logger.Log("  ", field.name, " = ", field.value)
+			}
+
 			d.msg.Set(field)
 		}
 
@@ -243,12 +273,4 @@ func (d *Decoder) decodeSegment(instructions []*Instruction) error {
 	}
 
 	return err
-}
-
-func (d *Decoder) log(param ...interface{}) {
-	if d.logger == nil {
-		return
-	}
-
-	d.logger.Log(param...)
 }
