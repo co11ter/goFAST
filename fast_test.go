@@ -60,6 +60,44 @@ type groupType struct {
 	}
 }
 
+type benchmarkMessage struct {
+	TemplateID              uint   `fast:"*"`
+	MessageType             string
+	BeginString             string
+	ApplVerID               string
+	SenderCompID            string
+	MsgSeqNum               uint32
+	SendingTime             uint64
+	GroupMDEntries          []benchmarkSequence
+}
+
+type benchmarkSequence struct {
+	MDUpdateAction      uint32
+	MDEntryType         string
+	MDEntryID           string
+	Symbol              string
+	RptSeq              int32
+	MDEntryDate         uint32
+	MDEntryTime         uint32
+	OrigTime            uint32
+	OrderSide           string
+	MDEntryPx           float64
+	MDEntrySize         float64
+	AccruedInterestAmt  float64
+	TradeValue          float64
+	Yield               float64
+	SettlDate           uint32
+	SettleType          string
+	Price               float64
+	PriceType           int32
+	RepoToPx            float64
+	BuyBackPx           float64
+	BuyBackDate         uint32
+	TradingSessionID    string
+	TradingSessionSubID string
+	RefOrderID          string
+}
+
 var (
 	decimalData1    = []byte{0xf8, 0x81, 0xfe, 0x4, 0x83, 0xff, 0xc, 0x8a, 0xfc, 0xa0, 0xff, 0x0, 0xef}
 	decimalMessage1 = decimalType{

@@ -23,7 +23,7 @@ func init() {
 		panic(err)
 	}
 	defer ftpl.Close()
-	tpls := fast.ParseXMLTemplate(ftpl)
+	tpls, _ := fast.ParseXMLTemplate(ftpl)
 
 	writer = &bytes.Buffer{}
 	encoder = fast.NewEncoder(writer, tpls...)

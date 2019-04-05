@@ -7,6 +7,8 @@ package fast_test
 import (
 	"bytes"
 	"github.com/co11ter/goFAST"
+	"io"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -23,7 +25,7 @@ func init() {
 		panic(err)
 	}
 	defer ftpl.Close()
-	tpls := fast.ParseXMLTemplate(ftpl)
+	tpls, _ := fast.ParseXMLTemplate(ftpl)
 
 	reader = &bytes.Buffer{}
 	decoder = fast.NewDecoder(reader, tpls...)
@@ -73,4 +75,35 @@ func TestIntegerDecode(t *testing.T) {
 func TestGroupDecode(t *testing.T) {
 	var msg groupType
 	decode(groupData1, &msg, &groupMessage1, t)
+}
+
+// write profile command: go test -bench=. -cpuprofile=cpu.out -memprofile=mem.out
+// convert to cpuprof.pdf command: go tool pprof -pdf -output=cpuprof.pdf goFAST.test cpu.out
+// convert to memprof.pdf command: go tool pprof -pdf -output=memprof.pdf goFAST.test mem.out
+func BenchmarkDecoder_Decode(b *testing.B) {
+	file, err := os.Open("testdata/data.dat")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	data, _ := ioutil.ReadAll(file)
+	file.Close()
+	reader.Write(data)
+
+	var msg benchmarkMessage
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		reader.Next(4) // skip sequence data
+		err = decoder.Decode(&msg)
+		if err == io.EOF {
+			b.StopTimer()
+			reader.Write(data)
+			b.StartTimer()
+			continue
+		}
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
 }

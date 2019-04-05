@@ -65,4 +65,40 @@
             </group>
         </group>
     </template>
+
+    <template name="Benchmark" id="2521" xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+        <string name="MessageType" id="35"><constant value="X" /></string>
+        <string name="ApplVerID" id="1128"><constant value="9"/></string>
+        <string name="BeginString" id="8"><constant value="FIXT.1.1"/></string>
+        <string name="SenderCompID" id="49"><constant value="MOEX"/></string>
+        <uInt32 name="MsgSeqNum" id="34"></uInt32>
+        <uInt64 name="SendingTime" id="52"></uInt64>
+        <sequence name="GroupMDEntries">
+            <length name="NoMDEntries" id="268"/>
+            <uInt32 name="MDUpdateAction" id="279" presence="optional"></uInt32>
+            <string name="MDEntryType" id="269"></string>
+            <string name="MDEntryID" id="278" presence="optional"></string>
+            <string name="Symbol" id="55" presence="optional"></string>
+            <int32 name="RptSeq" id="83" presence="optional"></int32>
+            <uInt32 name="MDEntryDate" id="272" presence="optional"></uInt32>
+            <uInt32 name="MDEntryTime" id="273" presence="optional"></uInt32>
+            <uInt32 name="OrigTime" id="9412" presence="optional"></uInt32>
+            <string name="OrderSide" id="10504" presence="optional"></string>
+            <decimal name="MDEntryPx" id="270" presence="optional"></decimal>
+            <decimal name="MDEntrySize" id="271" presence="optional"></decimal>
+            <decimal name="AccruedInterestAmt" id="5384" presence="optional"></decimal>
+            <decimal name="TradeValue" id="6143" presence="optional"></decimal>
+            <decimal name="Yield" id="236" presence="optional"></decimal>
+            <uInt32 name="SettlDate" id="64" presence="optional"></uInt32>
+            <string name="SettleType" id="5459" presence="optional"></string>
+            <decimal name="Price" id="44" presence="optional"></decimal>
+            <int32 name="PriceType" id="423" presence="optional"></int32>
+            <decimal name="RepoToPx" id="5677" presence="optional"></decimal>
+            <decimal name="BuyBackPx" id="5558" presence="optional"></decimal>
+            <uInt32 name="BuyBackDate" id="5559" presence="optional"></uInt32>
+            <string name="TradingSessionID" id="336" presence="optional"></string>
+            <string name="TradingSessionSubID" id="625" presence="optional"></string>
+            <string name="RefOrderID" id="1080" presence="optional"></string>
+        </sequence>
+    </template>
 </templates>
