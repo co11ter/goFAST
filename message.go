@@ -69,13 +69,15 @@ func (m *message) Unlock() {
 }
 
 func (m *message) lookUpRField(field *field) (v reflect.Value, ok bool) {
-	index := m.lookUpIndex(field)
-	if index == nil {
+	if field.index == nil {
+		m.lookUpIndex(field)
+	}
+	if field.index == nil {
 		return
 	}
 
 	v = extractValue(m.values[m.index])
-	v = extractValue(v.Field(*index))
+	v = extractValue(v.Field(*field.index))
 	ok = true
 	return
 }
@@ -160,18 +162,15 @@ func (m *message) set(field reflect.Value, value reflect.Value) {
 	}
 }
 
-func (m *message) lookUpIndex(field *field) *int {
-	id := strconv.Itoa(int(field.id))
-
-	if v, ok := m.currentMap[id]; ok {
-		return &v
-	}
-
+func (m *message) lookUpIndex(field *field) {
 	if v, ok := m.currentMap[field.name]; ok {
-		return &v
+		field.index = &v
+		return
+	}
+	if v, ok := m.currentMap[strconv.Itoa(int(field.id))]; ok {
+		field.index = &v
 	}
 
-	return nil
 }
 
 func parseType(rt reflect.Type, currentMap tagMap) {

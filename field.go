@@ -10,6 +10,7 @@ type field struct {
 	templateID uint   // template id
 	num        int    // slice index
 	multiple   bool   // has internal fields
+	index      *int   // message field index
 
 	value interface{}
 }
