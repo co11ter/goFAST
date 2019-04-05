@@ -60,23 +60,23 @@ const (
 	TypeInt32
 	TypeUint64
 	TypeInt64
-	TypeAsciiString
-	TypeUnicodeString
-	TypeSequence
-	TypeGroup
-	TypeDecimal
 	TypeLength
 	TypeExponent
 	TypeMantissa
+	TypeDecimal
+	TypeAsciiString
+	TypeUnicodeString
 	TypeByteVector
+	TypeSequence
+	TypeGroup
 
 	OperatorNone InstructionOperator = iota
 	OperatorConstant
 	OperatorDelta
 	OperatorDefault
 	OperatorCopy
-	OperatorIncrement
-	OperatorTail
+	OperatorIncrement // It's applicable to integer field types
+	OperatorTail // It's applicable to string and byte vector field types
 
 	PresenceMandatory InstructionPresence = iota
 	PresenceOptional
@@ -135,6 +135,19 @@ func (p *xmlParser) Parse() (templates []*Template, err error) {
 
 func (p *xmlParser) postProcessing(instructions []*Instruction) (err error) {
 	for _, item := range instructions {
+		if !item.isValid() {
+			return ErrS2
+		}
+
+		item.key = strconv.Itoa(int(item.ID)) + ":" +
+			item.Name + ":" +
+			strconv.Itoa(int(item.Type))
+
+		err = p.postProcessing(item.Instructions)
+		if err != nil {
+			return err
+		}
+
 		if item.Type != TypeSequence && item.Type != TypeGroup {
 			continue
 		}
@@ -143,11 +156,6 @@ func (p *xmlParser) postProcessing(instructions []*Instruction) (err error) {
 			if instruction.hasPmapBit() {
 				item.pMapSize++
 			}
-		}
-
-		err = p.postProcessing(item.Instructions)
-		if err != nil {
-			break
 		}
 	}
 

@@ -6,7 +6,6 @@ package fast
 
 import (
 	"github.com/shopspring/decimal"
-	"strconv"
 )
 
 // Instruction contains rules for encoding/decoding field.
@@ -20,14 +19,19 @@ type Instruction struct {
 	Value        interface{}
 
 	pMapSize int
-	keystr   string
+	key   string
 }
 
-func (i *Instruction) key() string {
-	if i.keystr == "" {
-		i.keystr = strconv.Itoa(int(i.ID)) + ":" + i.Name + ":" + strconv.Itoa(int(i.Type))
+func (i *Instruction) isValid() bool {
+	if i.Operator == OperatorDelta && (i.Type < TypeUint32 || i.Type > TypeMantissa) {
+		return false
 	}
-	return i.keystr
+
+	if i.Operator == OperatorTail && (i.Type < TypeAsciiString || i.Type > TypeByteVector) {
+		return false
+	}
+
+	return true
 }
 
 func (i *Instruction) isOptional() bool {
@@ -54,16 +58,16 @@ func (i *Instruction) inject(writer *writer, s storage, pmap *pMap, value interf
 		if err != nil {
 			return
 		}
-		s.save(i.key(), value)
+		s.save(i.key, value)
 	case OperatorConstant:
 		if i.isOptional() {
 			pmap.SetNextBit(value != nil)
 		}
-		s.save(i.key(), value)
+		s.save(i.key, value)
 	case OperatorDefault:
 		if i.Value == value {
 			pmap.SetNextBit(false)
-			s.save(i.key(), value)
+			s.save(i.key, value)
 			return
 		}
 		pmap.SetNextBit(true)
@@ -72,22 +76,22 @@ func (i *Instruction) inject(writer *writer, s storage, pmap *pMap, value interf
 			return
 		}
 		if value != nil {
-			s.save(i.key(), value)
+			s.save(i.key, value)
 		}
 	case OperatorDelta:
-		if previous := s.load(i.key()); previous != nil {
+		if previous := s.load(i.key); previous != nil {
 			value = delta(value, previous)
 		}
 		err = i.write(writer, value)
 		if err != nil {
 			return
 		}
-		s.save(i.key(), value)
+		s.save(i.key, value)
 	case OperatorTail:
 		// TODO
 	case OperatorCopy, OperatorIncrement:
-		previous := s.load(i.key())
-		s.save(i.key(), value)
+		previous := s.load(i.key)
+		s.save(i.key, value)
 		if previous == nil {
 			if i.Value == value {
 				pmap.SetNextBit(false)
@@ -150,7 +154,7 @@ func (i *Instruction) extract(reader *reader, s storage, pmap *pMap) (result int
 		if err != nil {
 			return nil, err
 		}
-		s.save(i.key(), result)
+		s.save(i.key, result)
 	case OperatorConstant:
 		if i.isOptional() {
 			if pmap.IsNextBitSet() {
@@ -159,23 +163,23 @@ func (i *Instruction) extract(reader *reader, s storage, pmap *pMap) (result int
 		} else {
 			result = i.Value
 		}
-		s.save(i.key(), result)
+		s.save(i.key, result)
 	case OperatorDefault:
 		if pmap.IsNextBitSet() {
 			result, err = i.read(reader)
 		} else {
 			result = i.Value
-			s.save(i.key(), result)
+			s.save(i.key, result)
 		}
 	case OperatorDelta:
 		result, err = i.read(reader)
 		if err != nil {
 			return nil, err
 		}
-		if previous := s.load(i.key()); previous != nil {
+		if previous := s.load(i.key); previous != nil {
 			result = sum(result, previous)
 		}
-		s.save(i.key(), result)
+		s.save(i.key, result)
 	case OperatorTail:
 		// TODO
 	case OperatorCopy, OperatorIncrement:
@@ -184,18 +188,18 @@ func (i *Instruction) extract(reader *reader, s storage, pmap *pMap) (result int
 			if err != nil {
 				return nil, err
 			}
-			s.save(i.key(), result)
+			s.save(i.key, result)
 		} else {
-			if s.load(i.key()) == nil {
+			if s.load(i.key) == nil {
 				result = i.Value
-				s.save(i.key(), result)
+				s.save(i.key, result)
 			} else {
 				// TODO what have to do on empty value
 
-				result = s.load(i.key())
+				result = s.load(i.key)
 				if i.Operator == OperatorIncrement {
 					result = increment(result)
-					s.save(i.key(), result)
+					s.save(i.key, result)
 				}
 			}
 		}
