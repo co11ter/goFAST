@@ -19,11 +19,15 @@ type Instruction struct {
 	Instructions []*Instruction
 	Value        interface{}
 
-	pMapSize     int
+	pMapSize int
+	keystr   string
 }
 
 func (i *Instruction) key() string {
-	return strconv.Itoa(int(i.ID)) + ":" + i.Name + ":" + strconv.Itoa(int(i.Type))
+	if i.keystr == "" {
+		i.keystr = strconv.Itoa(int(i.ID)) + ":" + i.Name + ":" + strconv.Itoa(int(i.Type))
+	}
+	return i.keystr
 }
 
 func (i *Instruction) isOptional() bool {
