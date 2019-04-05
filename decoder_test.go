@@ -43,7 +43,7 @@ func decode(data []byte, msg interface{}, expect interface{}, t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(msg, expect) {
-		t.Fatal("messages is not equal", msg, expect)
+		t.Fatal("messages is not equal, got: ", msg, ", expect: ", expect)
 	}
 }
 

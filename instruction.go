@@ -267,16 +267,17 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 			result = int32(*tmp)
 		}
 	case TypeDecimal:
-		exponent, err := reader.ReadInt(i.isNullable())
+		tmp, err := reader.ReadInt(i.isNullable())
 		if err != nil {
 			return result, err
 		}
-		if exponent != nil {
+		if tmp != nil {
+			exponent := int32(*tmp)
 			mantissa, err := reader.ReadInt(false)
 			if err != nil {
 				return result, err
 			}
-			result, _ = decimal.New(*mantissa, int32(*exponent)).Float64()
+			result, _ = decimal.New(*mantissa, exponent).Float64()
 		}
 	}
 

@@ -13,20 +13,29 @@ const (
 	maxLoadBytes = (32 << (^uint(0) >> 63)) * 8 / 7 // max size of 7-th bits data
 )
 
+// reader reads type data from io.Reader. No thread safe!
 type reader struct {
 	reader io.Reader
 	strBuf bytes.Buffer
-	bytes []byte
+	bytes  []byte
+
+	tmpErr  error
+	tmpUint uint64
+	tmpInt  int64
+	tmpDcrm int64
+	tmpLen  *uint64
+	tmpByte []byte
+	tmpStr  string
 }
 
 func newReader(r io.Reader) *reader {
-	return &reader{r, bytes.Buffer{}, make([]byte, 1)}
+	return &reader{reader: r, strBuf: bytes.Buffer{}, bytes: make([]byte, 1)}
 }
 
 func (r *reader) ReadPMap() (m *pMap, err error) {
 	m = new(pMap)
-	m.mask = 1;
-	for i:=0; i < maxLoadBytes; i++ {
+	m.mask = 1
+	for i := 0; i < maxLoadBytes; i++ {
 		_, err = r.reader.Read(r.bytes)
 		if err != nil {
 			return
@@ -57,120 +66,118 @@ func (r *reader) ReadPMap() (m *pMap, err error) {
 }
 
 func (r *reader) ReadInt(nullable bool) (*int64, error) {
-	var err error
-	_, err = r.reader.Read(r.bytes)
-	if err != nil {
-		return nil, err
+	_, r.tmpErr = r.reader.Read(r.bytes)
+	if r.tmpErr != nil {
+		return nil, r.tmpErr
 	}
 
-	var result int64
-	var decrement int64 = 1
+	r.tmpDcrm = 1
 
 	if (r.bytes[0] & 0x40) > 0 {
-		result = int64((-1 ^ int8(0x7F)) | int8((r.bytes[0] & 0x7F)))
-		decrement = 0
+		r.tmpInt = int64((-1 ^ int8(0x7F)) | int8((r.bytes[0] & 0x7F)))
+		r.tmpDcrm = 0
 	} else {
-		result = int64(r.bytes[0] & 0x3F)
+		r.tmpInt = int64(r.bytes[0] & 0x3F)
 	}
 
 	for (r.bytes[0] & 0x80) == 0 {
-		result <<= 7;
-		_, err = r.reader.Read(r.bytes)
-		if err != nil {
-			return nil, err
+		r.tmpInt <<= 7
+		_, r.tmpErr = r.reader.Read(r.bytes)
+		if r.tmpErr != nil {
+			return nil, r.tmpErr
 		}
-		result |= int64(r.bytes[0] & 0x7F);
+		r.tmpInt |= int64(r.bytes[0] & 0x7F)
 	}
 
 	if nullable {
-		if result == 0 {
-			return nil, err
+		if r.tmpInt == 0 {
+			return nil, r.tmpErr
 		} else {
-			result -= decrement
+			r.tmpInt -= r.tmpDcrm
 		}
 	}
 
-	return &result, nil
+	return &r.tmpInt, nil
 }
 
 func (r *reader) ReadUint(nullable bool) (*uint64, error) {
-	var err error
-	_, err = r.reader.Read(r.bytes)
-	if err != nil {
-		return nil, err
+	_, r.tmpErr = r.reader.Read(r.bytes)
+	if r.tmpErr != nil {
+		return nil, r.tmpErr
 	}
 
-	result := uint64(r.bytes[0] & 0x7F)
+	r.tmpUint = uint64(r.bytes[0] & 0x7F)
 
 	for (r.bytes[0] & 0x80) == 0 {
-		result <<= 7;
-		_, err = r.reader.Read(r.bytes)
-		if err != nil {
-			return nil, err
+		r.tmpUint <<= 7
+		_, r.tmpErr = r.reader.Read(r.bytes)
+		if r.tmpErr != nil {
+			return nil, r.tmpErr
 		}
-		result |= uint64(r.bytes[0] & 0x7F);
+		r.tmpUint |= uint64(r.bytes[0] & 0x7F)
 	}
 
 	if nullable {
-		if result == 0 {
-			return nil, err
+		if r.tmpUint == 0 {
+			return nil, r.tmpErr
 		} else {
-			result--
+			r.tmpUint--
 		}
 	}
 
-	return &result, nil
+	return &r.tmpUint, nil
 }
 
 func (r *reader) ReadByteVector(nullable bool) (*[]byte, error) {
-	length, err := r.ReadUint(nullable)
-	if err != nil {
-		return nil, err
+	r.tmpLen, r.tmpErr = r.ReadUint(nullable)
+	if r.tmpErr != nil {
+		return nil, r.tmpErr
 	}
 
-	result := make([]byte, uint32(*length))
-	_, err = io.ReadFull(r.reader, result)
+	if uint32(*r.tmpLen) > uint32(len(r.tmpByte)) {
+		r.tmpByte = make([]byte, uint32(*r.tmpLen))
+	} else {
+		r.tmpByte = r.tmpByte[:uint32(*r.tmpLen)]
+	}
 
-	return &result, nil
+	_, r.tmpErr = io.ReadFull(r.reader, r.tmpByte)
+	return &r.tmpByte, nil
 }
 
 // read ascii string
 func (r *reader) ReadString(nullable bool) (*string, error) {
-	var err error
-	_, err = r.reader.Read(r.bytes)
-	if err != nil {
-		return nil, err
+	_, r.tmpErr = r.reader.Read(r.bytes)
+	if r.tmpErr != nil {
+		return nil, r.tmpErr
 	}
-
-	var result string
 
 	if (r.bytes[0] & 0x7F) == 0 {
 		if r.bytes[0] == 0x80 {
 			if nullable {
 				return nil, nil
 			}
-			return &result, nil
+			return &r.tmpStr, nil
 		}
 
-		_, err = r.reader.Read(r.bytes)
-		if err != nil {
-			return nil, err
+		_, r.tmpErr = r.reader.Read(r.bytes)
+		if r.tmpErr != nil {
+			return nil, r.tmpErr
 		}
 
 		if r.bytes[0] == 0x80 {
-			return &result, nil
+			return &r.tmpStr, nil
 		} else if nullable && r.bytes[0] == 0x00 {
-			_, err = r.reader.Read(r.bytes)
-			if err != nil {
-				return nil, err
+			_, r.tmpErr = r.reader.Read(r.bytes)
+			if r.tmpErr != nil {
+				return nil, r.tmpErr
 			}
 
 			if r.bytes[0] == 0x80 {
-				return &result, nil
+				return &r.tmpStr, nil
 			}
 		}
-		err = ErrR9
-		return nil, err
+		r.tmpErr = ErrR9
+		return nil, r.tmpErr
 	}
 
 	for {
@@ -179,13 +186,13 @@ func (r *reader) ReadString(nullable bool) (*string, error) {
 			break
 		}
 		r.strBuf.WriteByte(r.bytes[0])
-		_, err = r.reader.Read(r.bytes)
-		if err != nil {
-			return nil, err
+		_, r.tmpErr = r.reader.Read(r.bytes)
+		if r.tmpErr != nil {
+			return nil, r.tmpErr
 		}
 	}
 
-	result = r.strBuf.String()
+	r.tmpStr = r.strBuf.String()
 	r.strBuf.Reset()
-	return &result, nil
+	return &r.tmpStr, nil
 }

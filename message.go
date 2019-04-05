@@ -149,10 +149,15 @@ func (m *message) Set(field *field) {
 func (m *message) set(field reflect.Value, value reflect.Value) {
 	if field.Kind() == reflect.Ptr {
 		field.Set(reflect.New(field.Type().Elem()))
-		field.Elem().Set(value)
-		return
+		field = field.Elem()
 	}
-	field.Set(value)
+	if field.Kind() == reflect.Slice {
+		newValue := reflect.MakeSlice(field.Type(), value.Len(), value.Len())
+		reflect.Copy(newValue, value)
+		field.Set(newValue)
+	} else {
+		field.Set(value)
+	}
 }
 
 func (m *message) lookUpIndex(field *field) *int {
