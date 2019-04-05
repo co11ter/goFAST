@@ -29,6 +29,13 @@ type Encoder struct {
 	mu sync.Mutex
 }
 
+// Reset resets dictionary
+func (e *Encoder) Reset() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.storage = newStorage()
+}
+
 // NewEncoder returns a new encoder that writes FAST-encoded message to writer.
 func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 	encoder := &Encoder{

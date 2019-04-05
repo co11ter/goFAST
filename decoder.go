@@ -40,6 +40,13 @@ func NewDecoder(reader io.Reader, tmps ...*Template) *Decoder {
 	return decoder
 }
 
+// Reset resets dictionary
+func (d *Decoder) Reset() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.storage = newStorage()
+}
+
 // SetLog sets writer for logging
 func (d *Decoder) SetLog(writer io.Writer) {
 	d.mu.Lock()
