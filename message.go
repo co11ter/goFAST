@@ -39,6 +39,7 @@ func (m *message) Reset(msg interface{}) {
 	}
 
 	m.values = []reflect.Value{rv}
+	m.index = 0
 	rt := reflect.TypeOf(msg).Elem()
 
 	var ok bool
