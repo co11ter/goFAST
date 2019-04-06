@@ -12,19 +12,23 @@ import (
 
 const structTag = "fast"
 
-type tagMap map[string]int
+type register struct {
+	prefer bool // true for map by id
+	byName map[string]int
+	byID   map[int]int
+}
 
 type message struct {
-	currentMap tagMap
-	cache map[string]tagMap
+	current *register
+	cache map[string]*register
 	values []reflect.Value
 	index int
 }
 
 func newMsg() *message {
 	return &message{
-		cache: make(map[string]tagMap),
-		currentMap: make(tagMap),
+		cache: make(map[string]*register),
+		current: &register{byName: make(map[string]int), byID: make(map[int]int)},
 	}
 }
 
@@ -39,10 +43,13 @@ func (m *message) Reset(msg interface{}) {
 
 	var ok bool
 	name := rt.PkgPath() + "." + rt.Name()
-	if m.currentMap, ok = m.cache[name]; !ok {
-		m.currentMap = make(tagMap)
-		parseType(rt, m.currentMap)
-		m.cache[name] = m.currentMap
+	if m.current, ok = m.cache[name]; !ok {
+		m.current = &register{byName: make(map[string]int), byID: make(map[int]int)}
+		countID, countName := parseType(rt, m.current)
+		if countID >= countName {
+			m.current.prefer = true
+		}
+		m.cache[name] = m.current
 	}
 }
 
@@ -119,7 +126,7 @@ func (m *message) SetLen(field *field) {
 
 // find template id in message and return
 func (m *message) GetTID() uint {
-	index, ok := m.currentMap["*"]
+	index, ok := m.current.byName["*"]
 	if !ok {
 		return 0
 	}
@@ -128,7 +135,7 @@ func (m *message) GetTID() uint {
 
 // set template id to message
 func (m *message) SetTID(tid uint) {
-	index, ok := m.currentMap["*"]
+	index, ok := m.current.byName["*"]
 	if !ok {
 		return
 	}
@@ -163,34 +170,52 @@ func (m *message) set(field reflect.Value, value reflect.Value) {
 }
 
 func (m *message) lookUpIndex(field *field) {
-	if v, ok := m.currentMap[field.name]; ok {
+	if m.current.prefer {
+		if v, ok := m.current.byID[int(field.id)]; ok {
+			field.index = &v
+			return
+		}
+		if v, ok := m.current.byName[field.name]; ok {
+			field.index = &v
+			return
+		}
+	}
+	if v, ok := m.current.byName[field.name]; ok {
 		field.index = &v
 		return
 	}
-	if v, ok := m.currentMap[strconv.Itoa(int(field.id))]; ok {
+	if v, ok := m.current.byID[int(field.id)]; ok {
 		field.index = &v
 	}
-
 }
 
-func parseType(rt reflect.Type, currentMap tagMap) {
-
+func parseType(rt reflect.Type, current *register) (countID, countName int) {
+	var (
+		field reflect.StructField
+		tmp reflect.Type
+		name string
+		id int
+		err error
+	)
 	for i := 0; i < rt.NumField(); i++ {
 
-		field := rt.Field(i)
+		field = rt.Field(i)
 
-		name := lookUpTag(field)
+		name = lookUpTag(field)
 		if name == "" {
 			continue
 		}
 
-		currentMap[name] = i
-
-		tmp := extractType(field.Type)
-
-		if tmp.Kind() == reflect.Struct {
-			parseType(tmp, currentMap)
+		id, err = strconv.Atoi(name)
+		if err == nil {
+			countID++
+			current.byID[id] = i
+		} else {
+			current.byName[name] = i
+			countName++
 		}
+
+		tmp = extractType(field.Type)
 
 		// extract first element of slice
 		if tmp.Kind() == reflect.Slice {
@@ -198,9 +223,12 @@ func parseType(rt reflect.Type, currentMap tagMap) {
 		}
 
 		if tmp.Kind() == reflect.Struct {
-			parseType(tmp, currentMap)
+			d, n := parseType(tmp, current)
+			countID += d
+			countID += n
 		}
 	}
+	return
 }
 
 func extractValue(rv reflect.Value) reflect.Value {

@@ -61,41 +61,41 @@ type groupType struct {
 }
 
 type benchmarkMessage struct {
-	TemplateID              uint   `fast:"*"`
-	MessageType             string
-	BeginString             string
-	ApplVerID               string
-	SenderCompID            string
-	MsgSeqNum               uint32
-	SendingTime             uint64
-	GroupMDEntries          []benchmarkSequence
+	TemplateID     uint   `fast:"*"`
+	MessageType    string `fast:"35"`
+	BeginString    string `fast:"8"`
+	ApplVerID      string `fast:"1128"`
+	SenderCompID   string `fast:"49"`
+	MsgSeqNum      uint32 `fast:"34"`
+	SendingTime    uint64 `fast:"52"`
+	GroupMDEntries []benchmarkSequence
 }
 
 type benchmarkSequence struct {
-	MDUpdateAction      uint32
-	MDEntryType         string
-	MDEntryID           string
-	Symbol              string
-	RptSeq              int32
-	MDEntryDate         uint32
-	MDEntryTime         uint32
-	OrigTime            uint32
-	OrderSide           string
-	MDEntryPx           float64
-	MDEntrySize         float64
-	AccruedInterestAmt  float64
-	TradeValue          float64
-	Yield               float64
-	SettlDate           uint32
-	SettleType          string
-	Price               float64
-	PriceType           int32
-	RepoToPx            float64
-	BuyBackPx           float64
-	BuyBackDate         uint32
-	TradingSessionID    string
-	TradingSessionSubID string
-	RefOrderID          string
+	MDUpdateAction      uint32  `fast:"279"`
+	MDEntryType         string  `fast:"269"`
+	MDEntryID           string  `fast:"278"`
+	Symbol              string  `fast:"55"`
+	RptSeq              int32   `fast:"83"`
+	MDEntryDate         uint32  `fast:"272"`
+	MDEntryTime         uint32  `fast:"273"`
+	OrigTime            uint32  `fast:"9412"`
+	OrderSide           string  `fast:"10504"`
+	MDEntryPx           float64 `fast:"270"`
+	MDEntrySize         float64 `fast:"271"`
+	AccruedInterestAmt  float64 `fast:"5384"`
+	TradeValue          float64 `fast:"6143"`
+	Yield               float64 `fast:"236"`
+	SettlDate           uint32  `fast:"64"`
+	SettleType          string  `fast:"5459"`
+	Price               float64 `fast:"44"`
+	PriceType           int32   `fast:"423"`
+	RepoToPx            float64 `fast:"5677"`
+	BuyBackPx           float64 `fast:"5558"`
+	BuyBackDate         uint32  `fast:"5559"`
+	TradingSessionID    string  `fast:"336"`
+	TradingSessionSubID string  `fast:"625"`
+	RefOrderID          string  `fast:"1080"`
 }
 
 var (
@@ -108,8 +108,8 @@ var (
 		IndividualDecimalOpt: 11.1,
 	}
 
-	value uint32 = 2
-	grpSegment = struct{
+	value      uint32 = 2
+	grpSegment        = struct {
 		InnerTestData uint32
 	}{
 		InnerTestData: 3,
@@ -173,12 +173,12 @@ var (
 		TestData:   1,
 		OuterGroup: struct {
 			OuterTestData uint32
-			InnerGroup *struct {
+			InnerGroup    *struct {
 				InnerTestData uint32
 			}
 		}{
 			OuterTestData: 2,
-			InnerGroup: &grpSegment,
+			InnerGroup:    &grpSegment,
 		},
 	}
 )
