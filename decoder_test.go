@@ -91,7 +91,6 @@ func BenchmarkDecoder_Decode(b *testing.B) {
 	reader.Write(data)
 
 	var msg benchmarkMessage
-	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		reader.Next(4) // skip sequence data
@@ -106,4 +105,5 @@ func BenchmarkDecoder_Decode(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+	b.ReportAllocs()
 }

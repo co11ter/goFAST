@@ -170,21 +170,23 @@ func (m *message) set(field reflect.Value, value reflect.Value) {
 }
 
 func (m *message) lookUpIndex(field *field) {
+	var v int
+	var ok bool
 	if m.current.prefer {
-		if v, ok := m.current.byID[int(field.id)]; ok {
+		if v, ok = m.current.byID[int(field.id)]; ok {
 			field.index = &v
 			return
 		}
-		if v, ok := m.current.byName[field.name]; ok {
+		if v, ok = m.current.byName[field.name]; ok {
 			field.index = &v
 			return
 		}
 	}
-	if v, ok := m.current.byName[field.name]; ok {
+	if v, ok = m.current.byName[field.name]; ok {
 		field.index = &v
 		return
 	}
-	if v, ok := m.current.byID[int(field.id)]; ok {
+	if v, ok = m.current.byID[int(field.id)]; ok {
 		field.index = &v
 	}
 }

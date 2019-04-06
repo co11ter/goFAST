@@ -4,10 +4,6 @@
 
 package fast
 
-import (
-	"github.com/shopspring/decimal"
-)
-
 // Instruction contains rules for encoding/decoding field.
 type Instruction struct {
 	ID           uint
@@ -132,12 +128,12 @@ func (i *Instruction) write(writer *writer, value interface{}) (err error) {
 	case TypeInt32, TypeExponent:
 		err = writer.WriteInt(i.isNullable(), int64(value.(int32)), maxSize32)
 	case TypeDecimal:
-		dec := decimal.NewFromFloat(value.(float64))
-		err = writer.WriteInt(i.isNullable(), int64(dec.Exponent()), maxSize32)
+		mantissa, exponent := newMantExp(value.(float64))
+		err = writer.WriteInt(i.isNullable(), int64(exponent), maxSize32)
 		if err != nil {
 			return
 		}
-		err = writer.WriteInt(false, dec.Coefficient().Int64(), maxSize64)
+		err = writer.WriteInt(false, mantissa, maxSize64)
 	}
 	return
 }
@@ -277,7 +273,7 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 			if err != nil {
 				return result, err
 			}
-			result, _ = decimal.New(*mantissa, exponent).Float64()
+			result = newFloat(*mantissa, exponent)
 		}
 	}
 
@@ -285,9 +281,7 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 }
 
 func (i *Instruction) injectDecimal(writer *writer, s storage, pmap *pMap, value interface{}) (err error) {
-	dec := decimal.NewFromFloat(value.(float64))
-	mantissa := dec.Coefficient().Int64()
-	exponent := dec.Exponent()
+	mantissa, exponent := newMantExp(value.(float64))
 	for _, in := range i.Instructions {
 		if in.Type == TypeMantissa {
 			err = in.inject(writer, s, pmap, mantissa)
@@ -326,8 +320,7 @@ func (i *Instruction) extractDecimal(reader *reader, s storage, pmap *pMap) (int
 		}
 	}
 
-	result, _ := decimal.New(mantissa, exponent).Float64()
-	return result, nil
+	return newFloat(mantissa, exponent), nil
 }
 
 func isEmpty(value interface{}) bool {
