@@ -134,6 +134,7 @@ func (r *reader) ReadByteVector(nullable bool) (*[]byte, error) {
 		return nil, r.tmpErr
 	}
 
+	// TODO r.tmpLen can be nil
 	if uint32(*r.tmpLen) > uint32(len(r.tmpByte)) {
 		r.tmpByte = make([]byte, uint32(*r.tmpLen))
 	} else {

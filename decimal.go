@@ -5,6 +5,7 @@ import (
 	"math"
 )
 
+// TODO int will be able overflow if exponent < 0 ??
 func newFloat(mantissa int64, exponent int32) (f float64) {
 	return float64(mantissa)/math.Pow10(int(exponent) * -1)
 }

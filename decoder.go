@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-// A Decoder reads and decodes FAST-encoded message from an io.ByteReader.
+// A Decoder reads and decodes FAST-encoded message from an io.Reader.
 // You may need buffered reader since decoder reads data byte by byte.
 type Decoder struct {
 	repo map[uint]*Template

@@ -32,6 +32,7 @@ func newMsg() *message {
 	}
 }
 
+// TODO have to panic if msg has duplicate field
 func (m *message) Reset(msg interface{}) {
 	rv := reflect.ValueOf(msg)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
