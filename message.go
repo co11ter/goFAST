@@ -200,6 +200,7 @@ func parseType(rt reflect.Type, current *register) (countID, countName int) {
 		name string
 		id int
 		err error
+		ok bool
 	)
 	for i := 0; i < rt.NumField(); i++ {
 
@@ -213,10 +214,16 @@ func parseType(rt reflect.Type, current *register) (countID, countName int) {
 		id, err = strconv.Atoi(name)
 		if err == nil {
 			countID++
+			if _, ok = current.byID[id]; ok {
+				panic(errors.New("found duplicate struct field"))
+			}
 			current.byID[id] = i
 		} else {
-			current.byName[name] = i
 			countName++
+			if _, ok = current.byName[name]; ok {
+				panic(errors.New("found duplicate struct field"))
+			}
+			current.byName[name] = i
 		}
 
 		tmp = extractType(field.Type)
