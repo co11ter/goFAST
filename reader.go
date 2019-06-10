@@ -130,11 +130,10 @@ func (r *reader) ReadUint(nullable bool) (*uint64, error) {
 
 func (r *reader) ReadByteVector(nullable bool) (*[]byte, error) {
 	r.tmpLen, r.tmpErr = r.ReadUint(nullable)
-	if r.tmpErr != nil {
+	if r.tmpErr != nil || r.tmpLen == nil {
 		return nil, r.tmpErr
 	}
 
-	// TODO r.tmpLen can be nil
 	if uint32(*r.tmpLen) > uint32(len(r.tmpByte)) {
 		r.tmpByte = make([]byte, uint32(*r.tmpLen))
 	} else {
