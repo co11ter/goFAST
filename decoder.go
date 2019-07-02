@@ -159,12 +159,15 @@ func (d *Decoder) decodeGroup(instruction *Instruction) error {
 		}
 	}
 
-	d.msg.Lock(parent)
+	locked := d.msg.Lock(parent)
 	err := d.decodeSegment(instruction.Instructions)
 	if err != nil {
 		return err
 	}
-	d.msg.Unlock()
+
+	if locked {
+		d.msg.Unlock()
+	}
 
 	if instruction.pMapSize > 0 {
 		d.pmc.restore()
@@ -215,12 +218,15 @@ func (d *Decoder) decodeSequence(instruction *Instruction) error {
 			}
 		}
 
-		d.msg.Lock(parent)
+		locked := d.msg.Lock(parent)
 		err = d.decodeSegment(instruction.Instructions[1:])
 		if err != nil {
 			return err
 		}
-		d.msg.Unlock()
+
+		if locked {
+			d.msg.Unlock()
+		}
 
 		if instruction.pMapSize > 0 {
 			d.pmc.restore()
