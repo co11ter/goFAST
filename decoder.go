@@ -185,6 +185,11 @@ func (d *Decoder) decodeSequence(instruction *Instruction) error {
 	if err != nil {
 		return err
 	}
+
+	if tmp == nil {
+		return nil
+	}
+
 	length := int(tmp.(uint32))
 	if d.logger != nil {
 		d.logger.Log("  length = ", length)
