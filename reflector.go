@@ -127,10 +127,6 @@ func (m *reflector) SetTemplateID(tid uint) {
 
 // set field value to message
 func (m *reflector) SetValue(field *Field) {
-	if field.Value == nil {
-		return
-	}
-
 	if rField, ok := m.lookUpRField(field); ok {
 		m.set(rField, reflect.ValueOf(field.Value))
 	}

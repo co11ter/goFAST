@@ -272,7 +272,9 @@ func (d *Decoder) decodeSegment(instructions []*Instruction) error {
 				d.logger.Log("  ", field.Name, " = ", field.Value)
 			}
 
-			d.msg.SetValue(field)
+			if field.Value != nil {
+				d.msg.SetValue(field)
+			}
 			releaseField(field)
 		}
 

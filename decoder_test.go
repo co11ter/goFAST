@@ -77,10 +77,23 @@ func TestGroupDecode(t *testing.T) {
 	decode(groupData1, &msg, &groupMessage1, t)
 }
 
-// write profile command: go test -bench=. -cpuprofile=cpu.out -memprofile=mem.out
+// write profile command: go test -bench=BenchmarkDecoder_DecodeReflection -cpuprofile=cpu.out -memprofile=mem.out
 // convert to cpuprof.pdf command: go tool pprof -pdf -output=cpuprof.pdf goFAST.test cpu.out
 // convert to memprof.pdf command: go tool pprof -pdf -output=memprof.pdf goFAST.test mem.out
-func BenchmarkDecoder_Decode(b *testing.B) {
+func BenchmarkDecoder_DecodeReflection(b *testing.B) {
+	var msg benchmarkMessage
+	benchDecode(b, &msg)
+}
+
+// write profile command: go test -bench=BenchmarkDecoder_DecodeReceiver -cpuprofile=cpu.out -memprofile=mem.out
+// convert to cpuprof.pdf command: go tool pprof -pdf -output=cpuprof.pdf goFAST.test cpu.out
+// convert to memprof.pdf command: go tool pprof -pdf -output=memprof.pdf goFAST.test mem.out
+func BenchmarkDecoder_DecodeReceiver(b *testing.B) {
+	var msg benchmarkReceiver
+	benchDecode(b, &msg)
+}
+
+func benchDecode(b *testing.B, msg interface{}) {
 	file, err := os.Open("testdata/data.dat")
 	if err != nil {
 		b.Fatal(err)
@@ -90,11 +103,10 @@ func BenchmarkDecoder_Decode(b *testing.B) {
 	file.Close()
 	reader.Write(data)
 
-	var msg benchmarkMessage
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		reader.Next(4) // skip sequence data
-		err = decoder.Decode(&msg)
+		err = decoder.Decode(msg)
 		if err == io.EOF {
 			b.StopTimer()
 			reader.Write(data)

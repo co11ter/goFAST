@@ -4,6 +4,10 @@
 
 package fast_test
 
+import (
+	fast "github.com/co11ter/goFAST"
+)
+
 type decimalType struct {
 	TemplateID           uint `fast:"*"`
 	CopyDecimal          float64
@@ -96,6 +100,102 @@ type benchmarkSequence struct {
 	TradingSessionID    string  `fast:"336"`
 	TradingSessionSubID string  `fast:"625"`
 	RefOrderID          string  `fast:"1080"`
+}
+
+type benchmarkReceiver struct {
+	benchmarkMessage
+
+	seqLocked bool
+	seqIndex int
+}
+
+func (br *benchmarkReceiver) SetTemplateID(tid uint) {
+	br.TemplateID = tid
+}
+
+func (br *benchmarkReceiver) SetLength(field *fast.Field) {
+	if field.Name != "GroupMDEntries" && len(br.GroupMDEntries) >= field.Value.(int) {
+		return
+	}
+	br.GroupMDEntries = make([]benchmarkSequence, field.Value.(int))
+}
+
+func (br *benchmarkReceiver) Lock(field *fast.Field) bool {
+	br.seqLocked = field.Name == "GroupMDEntries"
+	if br.seqLocked {
+		br.seqIndex = field.Value.(int)
+	}
+	return br.seqLocked
+}
+
+func (br *benchmarkReceiver) Unlock() {
+	br.seqLocked = false
+	br.seqIndex = 0
+}
+
+func (br *benchmarkReceiver) SetValue(field *fast.Field) {
+	switch field.Name {
+	case "MessageType":
+		br.MessageType = field.Value.(string)
+	case "BeginString":
+		br.BeginString = field.Value.(string)
+	case "ApplVerID":
+		br.ApplVerID = field.Value.(string)
+	case "SenderCompID":
+		br.SenderCompID = field.Value.(string)
+	case "MsgSeqNum":
+		br.MsgSeqNum = field.Value.(uint32)
+	case "SendingTime":
+		br.SendingTime = field.Value.(uint64)
+	case "MDUpdateAction":
+		br.GroupMDEntries[br.seqIndex].MDUpdateAction = field.Value.(uint32)
+	case "MDEntryType":
+		br.GroupMDEntries[br.seqIndex].MDEntryType = field.Value.(string)
+	case "MDEntryID":
+		br.GroupMDEntries[br.seqIndex].MDEntryID = field.Value.(string)
+	case "Symbol":
+		br.GroupMDEntries[br.seqIndex].Symbol = field.Value.(string)
+	case "RptSeq":
+		br.GroupMDEntries[br.seqIndex].RptSeq = field.Value.(int32)
+	case "MDEntryDate":
+		br.GroupMDEntries[br.seqIndex].MDEntryDate = field.Value.(uint32)
+	case "MDEntryTime":
+		br.GroupMDEntries[br.seqIndex].MDEntryTime = field.Value.(uint32)
+	case "OrigTime":
+		br.GroupMDEntries[br.seqIndex].OrigTime = field.Value.(uint32)
+	case "OrderSide":
+		br.GroupMDEntries[br.seqIndex].OrderSide = field.Value.(string)
+	case "MDEntryPx":
+		br.GroupMDEntries[br.seqIndex].MDEntryPx = field.Value.(float64)
+	case "MDEntrySize":
+		br.GroupMDEntries[br.seqIndex].MDEntrySize = field.Value.(float64)
+	case "AccruedInterestAmt":
+		br.GroupMDEntries[br.seqIndex].AccruedInterestAmt = field.Value.(float64)
+	case "TradeValue":
+		br.GroupMDEntries[br.seqIndex].TradeValue = field.Value.(float64)
+	case "Yield":
+		br.GroupMDEntries[br.seqIndex].Yield = field.Value.(float64)
+	case "SettlDate":
+		br.GroupMDEntries[br.seqIndex].SettlDate = field.Value.(uint32)
+	case "SettleType":
+		br.GroupMDEntries[br.seqIndex].SettleType = field.Value.(string)
+	case "Price":
+		br.GroupMDEntries[br.seqIndex].Price = field.Value.(float64)
+	case "PriceType":
+		br.GroupMDEntries[br.seqIndex].PriceType = field.Value.(int32)
+	case "RepoToPx":
+		br.GroupMDEntries[br.seqIndex].RepoToPx = field.Value.(float64)
+	case "BuyBackPx":
+		br.GroupMDEntries[br.seqIndex].BuyBackPx = field.Value.(float64)
+	case "BuyBackDate":
+		br.GroupMDEntries[br.seqIndex].BuyBackDate = field.Value.(uint32)
+	case "TradingSessionID":
+		br.GroupMDEntries[br.seqIndex].TradingSessionID = field.Value.(string)
+	case "TradingSessionSubID":
+		br.GroupMDEntries[br.seqIndex].TradingSessionSubID = field.Value.(string)
+	case "RefOrderID":
+		br.GroupMDEntries[br.seqIndex].RefOrderID = field.Value.(string)
+	}
 }
 
 var (
