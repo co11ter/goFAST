@@ -4,13 +4,32 @@
 
 package fast
 
-type field struct {
-	id         uint   // instruction id
-	name       string // instruction name
-	templateID uint   // template id
-	num        int    // slice index
-	multiple   bool   // has internal fields
-	index      *int   // message field index
+import (
+	"sync"
+)
 
-	value interface{}
+type Field struct {
+	ID    uint
+	Name  string
+	Value interface{}
+
+	index *int // message field index for reflection
+}
+
+var fieldPool = sync.Pool{
+	New: func() interface{} {
+		return &Field{}
+	},
+}
+
+func acquireField() *Field {
+	return fieldPool.Get().(*Field)
+}
+
+func releaseField(field *Field) {
+	field.ID = 0
+	field.Name = ""
+	field.Value = nil
+	field.index = nil
+	fieldPool.Put(field)
 }

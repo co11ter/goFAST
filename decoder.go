@@ -19,7 +19,7 @@ type Decoder struct {
 	pmc *pMapCollector
 
 	reader *reader
-	msg *message
+	msg Receiver
 
 	logger *readerLog
 	mu sync.Mutex
@@ -31,7 +31,6 @@ func NewDecoder(reader io.Reader, tmps ...*Template) *Decoder {
 		repo: make(map[uint]*Template),
 		storage: newStorage(),
 		reader: newReader(reader),
-		msg: newMsg(),
 		pmc: newPMapCollector(),
 	}
 	for _, t := range tmps {
@@ -102,8 +101,10 @@ func (d *Decoder) Decode(msg interface{}) error {
 		return ErrD9
 	}
 
-	d.msg.Reset(msg)
-	d.msg.SetTID(d.tid)
+	if d.msg, ok = msg.(Receiver); !ok {
+		d.msg = makeMsg(msg)
+	}
+	d.msg.SetTemplateID(d.tid)
 	return d.decodeSegment(tpl.Instructions)
 }
 
@@ -140,11 +141,9 @@ func (d *Decoder) decodeGroup(instruction *Instruction) error {
 		return nil
 	}
 
-	parent := &field{
-		id: instruction.ID,
-		name: instruction.Name,
-		templateID: d.tid,
-	}
+	parent := acquireField()
+	parent.ID = instruction.ID
+	parent.Name = instruction.Name
 
 	if instruction.pMapSize > 0 {
 		if d.logger != nil {
@@ -173,6 +172,7 @@ func (d *Decoder) decodeGroup(instruction *Instruction) error {
 		d.pmc.restore()
 	}
 
+	releaseField(parent)
 	return nil
 }
 
@@ -195,17 +195,15 @@ func (d *Decoder) decodeSequence(instruction *Instruction) error {
 		d.logger.Log("  length = ", length)
 	}
 
-	parent := &field{
-		id: instruction.ID,
-		name: instruction.Name,
-		templateID: d.tid,
-		value: length,
-	}
+	parent := acquireField()
+	parent.ID = instruction.ID
+	parent.Name = instruction.Name
+	parent.Value = length
 
-	d.msg.SetLen(parent)
+	d.msg.SetLength(parent)
 
 	for i:=0; i<length; i++ {
-		parent.num = i
+		parent.Value = i
 		if d.logger != nil {
 			d.logger.Log("sequence elem[", i, "] start: ")
 		}
@@ -238,6 +236,7 @@ func (d *Decoder) decodeSequence(instruction *Instruction) error {
 		}
 	}
 
+	releaseField(parent)
 	return nil
 }
 
@@ -261,21 +260,20 @@ func (d *Decoder) decodeSegment(instructions []*Instruction) error {
 				d.logger.Log("  reader -> ")
 			}
 
-			field := &field{
-				id: instruction.ID,
-				name: instruction.Name,
-				templateID: d.tid,
-			}
-			field.value, err = instruction.extract(d.reader, d.storage, d.pmc.active())
+			field := acquireField()
+			field.ID = instruction.ID
+			field.Name = instruction.Name
+			field.Value, err = instruction.extract(d.reader, d.storage, d.pmc.active())
 			if err != nil {
 				return err
 			}
 
 			if d.logger != nil {
-				d.logger.Log("  ", field.name, " = ", field.value)
+				d.logger.Log("  ", field.Name, " = ", field.Value)
 			}
 
-			d.msg.Set(field)
+			d.msg.SetValue(field)
+			releaseField(field)
 		}
 
 		if err != nil {
