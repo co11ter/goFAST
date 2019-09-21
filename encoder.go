@@ -65,7 +65,8 @@ func (e *Encoder) SetLog(writer io.Writer) {
 	}
 }
 
-// Encode encodes msg struct to writer
+// Encode encodes msg struct to writer. If an encountered value implements the Sender interface
+// and is not a nil pointer, Encode calls method of Sender to produce encoded message.
 func (e *Encoder) Encode(msg interface{}) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()

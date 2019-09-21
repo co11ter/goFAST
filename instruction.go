@@ -23,7 +23,7 @@ func (i *Instruction) isValid() bool {
 		return false
 	}
 
-	if i.Operator == OperatorTail && (i.Type < TypeAsciiString || i.Type > TypeByteVector) {
+	if i.Operator == OperatorTail && (i.Type < TypeASCIIString || i.Type > TypeByteVector) {
 		return false
 	}
 
@@ -119,7 +119,7 @@ func (i *Instruction) write(writer *writer, value interface{}) (err error) {
 		err = writer.WriteUint(i.isNullable(), uint64(value.(uint32)), maxSize32)
 	case TypeUint64:
 		err = writer.WriteUint(i.isNullable(), value.(uint64), maxSize64)
-	case TypeAsciiString:
+	case TypeASCIIString:
 		err = writer.WriteString(i.isNullable(), value.(string))
 	case TypeUnicodeString:
 		err = writer.WriteByteVector(i.isNullable(), []byte(value.(string)))
@@ -230,7 +230,7 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 		if tmp != nil {
 			result = *tmp
 		}
-	case TypeAsciiString:
+	case TypeASCIIString:
 		tmp, err := reader.ReadString(i.isNullable())
 		if err != nil {
 			return result, err

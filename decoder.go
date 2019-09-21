@@ -63,8 +63,10 @@ func (d *Decoder) SetLog(writer io.Writer) {
 	}
 }
 
-// Decode reads the next FAST-encoded message from reader
-// and stores it in the value pointed to by msg.
+// Decode reads the next FAST-encoded message from reader and stores it
+// in the value pointed to by msg. If an encountered data implements the
+// Receiver interface and is not a nil pointer, Decode will use methods
+// of Receiver for set decoded data.
 func (d *Decoder) Decode(msg interface{}) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()

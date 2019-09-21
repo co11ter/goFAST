@@ -53,6 +53,7 @@ type InstructionOperator int
 // InstructionPresence specifies presence of the field.
 type InstructionPresence int
 
+// Instructions type, operator and presence
 const (
 	// TypeNull mark type of instruction null.
 	TypeNull InstructionType = iota
@@ -64,7 +65,7 @@ const (
 	TypeExponent
 	TypeMantissa
 	TypeDecimal
-	TypeAsciiString
+	TypeASCIIString
 	TypeUnicodeString
 	TypeByteVector
 	TypeSequence
@@ -300,7 +301,7 @@ func newInstruction(token *xml.StartElement) (*Instruction, error) {
 
 	switch token.Name.Local {
 	case tagString:
-		instruction.Type = TypeAsciiString
+		instruction.Type = TypeASCIIString
 	case tagInt32:
 		instruction.Type = TypeInt32
 	case tagInt64:
@@ -377,7 +378,7 @@ func newValue(token *xml.StartElement, typ InstructionType) (value interface{}, 
 	for _, attr := range token.Attr {
 		if attr.Name.Local == attrValue {
 			switch typ {
-			case TypeAsciiString, TypeUnicodeString:
+			case TypeASCIIString, TypeUnicodeString:
 				value = attr.Value
 			case TypeUint64:
 				value, err = strconv.ParseUint(attr.Value, 10, 64)

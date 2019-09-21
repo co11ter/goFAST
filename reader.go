@@ -92,9 +92,8 @@ func (r *reader) ReadInt(nullable bool) (*int64, error) {
 	if nullable {
 		if r.tmpInt == 0 {
 			return nil, r.tmpErr
-		} else {
-			r.tmpInt -= r.tmpDcrm
 		}
+		r.tmpInt -= r.tmpDcrm
 	}
 
 	return &r.tmpInt, nil
@@ -120,9 +119,8 @@ func (r *reader) ReadUint(nullable bool) (*uint64, error) {
 	if nullable {
 		if r.tmpUint == 0 {
 			return nil, r.tmpErr
-		} else {
-			r.tmpUint--
 		}
+		r.tmpUint--
 	}
 
 	return &r.tmpUint, nil

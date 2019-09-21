@@ -8,6 +8,7 @@ import (
 	"sync"
 )
 
+// Field contains value for decoding/encoding
 type Field struct {
 	ID    uint
 	Name  string
