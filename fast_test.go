@@ -114,10 +114,9 @@ func (br *benchmarkReceiver) SetTemplateID(tid uint) {
 }
 
 func (br *benchmarkReceiver) SetLength(field *fast.Field) {
-	if field.Name != "GroupMDEntries" && len(br.GroupMDEntries) >= field.Value.(int) {
-		return
+	if field.Name == "GroupMDEntries" && len(br.GroupMDEntries) < field.Value.(int) {
+		br.GroupMDEntries = make([]benchmarkSequence, field.Value.(int))
 	}
-	br.GroupMDEntries = make([]benchmarkSequence, field.Value.(int))
 }
 
 func (br *benchmarkReceiver) Lock(field *fast.Field) bool {

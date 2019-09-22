@@ -4,6 +4,5 @@
 
 /*
 Package fast implements FAST (FIX Adapted for STreaming) encoder/decoder.
-Under development! Library is not recommended for production.
 */
 package fast
