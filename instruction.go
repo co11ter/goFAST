@@ -320,7 +320,7 @@ func (i *Instruction) extractDecimal(reader *reader, s storage, pmap *pMap) (int
 				return nil, err
 			}
 			if eField == nil {
-				return nil, nil
+				return nil, err
 			}
 			exponent = eField.(int32)
 		}
