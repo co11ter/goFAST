@@ -15,7 +15,7 @@ type Instruction struct {
 	Value        interface{}
 
 	pMapSize int
-	key   string
+	key      string
 }
 
 func (i *Instruction) isValid() bool {
@@ -281,9 +281,12 @@ func (i *Instruction) read(reader *reader) (result interface{}, err error) {
 }
 
 func (i *Instruction) injectDecimal(writer *writer, s storage, pmap *pMap, value interface{}) (err error) {
-	mantissa, exponent := newMantExp(value.(float64))
+	var mantissa, exponent interface{}
+	if value != nil {
+		mantissa, exponent = newMantExp(value.(float64))
+	}
 	for _, in := range i.Instructions {
-		if in.Type == TypeMantissa {
+		if in.Type == TypeMantissa && value != nil {
 			err = in.inject(writer, s, pmap, mantissa)
 			if err != nil {
 				return
@@ -315,6 +318,9 @@ func (i *Instruction) extractDecimal(reader *reader, s storage, pmap *pMap) (int
 			eField, err := in.extract(reader, s, pmap)
 			if err != nil {
 				return nil, err
+			}
+			if eField == nil {
+				return nil, nil
 			}
 			exponent = eField.(int32)
 		}

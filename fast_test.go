@@ -9,11 +9,12 @@ import (
 )
 
 type decimalType struct {
-	TemplateID           uint `fast:"*"`
-	CopyDecimal          float64
-	MandatoryDecimal     float64
-	IndividualDecimal    float64
-	IndividualDecimalOpt float64
+	TemplateID                        uint `fast:"*"`
+	CopyDecimal                       float64
+	MandatoryDecimal                  float64
+	IndividualDecimal                 float64
+	IndividualDecimalOpt              float64
+	IndividualDecimalOptExpNotPresent (*float64)
 }
 
 type sequenceType struct {
@@ -106,7 +107,7 @@ type benchmarkReceiver struct {
 	benchmarkMessage
 
 	seqLocked bool
-	seqIndex int
+	seqIndex  int
 }
 
 func (br *benchmarkReceiver) SetTemplateID(tid uint) {
@@ -198,13 +199,14 @@ func (br *benchmarkReceiver) SetValue(field *fast.Field) {
 }
 
 var (
-	decimalData1    = []byte{0xf8, 0x81, 0xfe, 0x4, 0x83, 0xff, 0xc, 0x8a, 0xfc, 0xa0, 0xff, 0x0, 0xef}
+	decimalData1    = []byte{0xfc, 0x81, 0xfe, 0x4, 0x83, 0xff, 0xc, 0x8a, 0xfc, 0xa0, 0xff, 0x0, 0xef, 0x80}
 	decimalMessage1 = decimalType{
-		TemplateID:           1,
-		CopyDecimal:          5.15,
-		MandatoryDecimal:     154.6,
-		IndividualDecimal:    0.0032,
-		IndividualDecimalOpt: 11.1,
+		TemplateID:                        1,
+		CopyDecimal:                       5.15,
+		MandatoryDecimal:                  154.6,
+		IndividualDecimal:                 0.0032,
+		IndividualDecimalOpt:              11.1,
+		IndividualDecimalOptExpNotPresent: (*float64)(nil),
 	}
 
 	value      uint32 = 2

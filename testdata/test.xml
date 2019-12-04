@@ -19,6 +19,14 @@
                 <delta/>
             </mantissa>
         </decimal>
+        <decimal name="IndividualDecimalOptExpNotPresent" id="5" presence="optional">
+            <exponent>
+                <default value="0"/>
+            </exponent>
+            <mantissa>
+                <delta/>
+            </mantissa>
+        </decimal>
     </template>
 
     <template name="Sequence" id="2" xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
