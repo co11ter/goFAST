@@ -22,8 +22,8 @@ type register struct {
 
 type reflector struct {
 	current *register
-	values []reflect.Value
-	index int
+	values  []reflect.Value
+	index   int
 }
 
 func makeMsg(msg interface{}) (m *reflector) {
@@ -49,16 +49,16 @@ func makeMsg(msg interface{}) (m *reflector) {
 }
 
 func (m *reflector) Lock(field *Field) bool {
-	v, ok := m.lookUpRField(field)
+	v, ok := m.lookUpRField(field, true)
 	if !ok {
 		return false
 	}
 
 	if v.Kind() == reflect.Slice {
-		v = extractValue(v.Index(field.Value.(int)))
+		v = extractValue(v.Index(field.Value.(int)), true)
 		m.values = append(m.values, v.Addr())
 	} else {
-		v = extractValue(v)
+		v = extractValue(v, true)
 		m.values = append(m.values, v.Addr())
 	}
 	m.index++
@@ -72,7 +72,7 @@ func (m *reflector) Unlock() {
 
 // find value in message and assign to field
 func (m *reflector) GetValue(field *Field) {
-	if rField, ok := m.lookUpRField(field); ok {
+	if rField, ok := m.lookUpRField(field, false); ok {
 		if rField.Kind() == reflect.Ptr {
 			if !rField.IsNil() {
 				field.Value = rField.Elem().Interface()
@@ -85,13 +85,13 @@ func (m *reflector) GetValue(field *Field) {
 
 // find slice len in message and assign to field
 func (m *reflector) GetLength(field *Field) {
-	if rField, ok := m.lookUpRField(field); ok {
+	if rField, ok := m.lookUpRField(field, false); ok {
 		field.Value = rField.Len()
 	}
 }
 
 func (m *reflector) SetLength(field *Field) {
-	if rField, ok := m.lookUpRField(field); ok {
+	if rField, ok := m.lookUpRField(field, true); ok {
 		length := field.Value.(int)
 		if length > rField.Cap() {
 			newValue := reflect.MakeSlice(rField.Type(), length, length)
@@ -127,7 +127,7 @@ func (m *reflector) SetTemplateID(tid uint) {
 
 // set field value to message
 func (m *reflector) SetValue(field *Field) {
-	if rField, ok := m.lookUpRField(field); ok {
+	if rField, ok := m.lookUpRField(field, true); ok {
 		m.set(rField, reflect.ValueOf(field.Value))
 	}
 }
@@ -146,7 +146,7 @@ func (m *reflector) set(field reflect.Value, value reflect.Value) {
 	}
 }
 
-func (m *reflector) lookUpRField(field *Field) (v reflect.Value, ok bool) {
+func (m *reflector) lookUpRField(field *Field, initializeNils bool) (v reflect.Value, ok bool) {
 	if field.index == nil {
 		m.lookUpIndex(field)
 	}
@@ -154,8 +154,8 @@ func (m *reflector) lookUpRField(field *Field) (v reflect.Value, ok bool) {
 		return
 	}
 
-	v = extractValue(m.values[m.index])
-	v = extractValue(v.Field(*field.index))
+	v = extractValue(m.values[m.index], initializeNils)
+	v = extractValue(v.Field(*field.index), initializeNils)
 	ok = true
 	return
 }
@@ -185,11 +185,11 @@ func (m *reflector) lookUpIndex(field *Field) {
 func parseType(rt reflect.Type, current *register) (countID, countName int) {
 	var (
 		field reflect.StructField
-		tmp reflect.Type
-		name string
-		id int
-		err error
-		ok bool
+		tmp   reflect.Type
+		name  string
+		id    int
+		err   error
+		ok    bool
 	)
 	for i := 0; i < rt.NumField(); i++ {
 
@@ -231,12 +231,14 @@ func parseType(rt reflect.Type, current *register) (countID, countName int) {
 	return
 }
 
-func extractValue(rv reflect.Value) reflect.Value {
+func extractValue(rv reflect.Value, initializeNils bool) reflect.Value {
 	if rv.Kind() == reflect.Ptr {
-		if rv.IsNil() {
+		if rv.IsNil() && initializeNils {
 			rv.Set(reflect.New(rv.Type().Elem()))
 		}
-		return rv.Elem()
+		if !rv.IsNil() {
+			return rv.Elem()
+		}
 	}
 	return rv
 }

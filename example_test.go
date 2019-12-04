@@ -38,7 +38,7 @@ func ExampleDecoder_Decode_reflection() {
 		FieldByID   string  `fast:"15"`   // assign value by instruction id
 		FieldByName string  `fast:"Test"` // assign value by instruction name
 		Equal       int32   			  // name of field is default value for assign
-		Nullable    *uint64 `fast:"20"`   // nullable - will skip, if field data is absent
+		Nullable    *uint64 `fast:"20"`   // nullable
 		Skip        int     `fast:"-"`    // skip
 		Sequence    []Seq
 	}
@@ -92,7 +92,7 @@ func ExampleEncoder_Encode_reflection() {
 		FieldByID   string  `fast:"15"`   // assign value by instruction id
 		FieldByName string  `fast:"Test"` // assign value by instruction name
 		Equal       int32   			  // name of field is default value for assign
-		Nullable    *uint64 `fast:"20"`   // nullable - will skip, if field data is absent
+		Nullable    *uint64 `fast:"20"`   // nullable
 		Skip        int     `fast:"-"`    // skip
 		Sequence    []Seq
 	}
@@ -117,5 +117,5 @@ func ExampleEncoder_Encode_reflection() {
 	}
 	fmt.Printf("%x", buf.Bytes())
 
-	// Output: c081746573f4808182
+	// Output: c081746573f480808182
 }
