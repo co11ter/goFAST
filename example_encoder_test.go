@@ -27,6 +27,12 @@ var xmlEncodeTemplate = `
 			<uInt64 name="SomeField" id="38"/>
 		</sequence>
 	</template>
+
+    <template name="Skip" id="999" xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+        <string name="Str" id="15">
+            <constant value="99"/>
+        </string>
+    </template>
 </templates>`
 
 type SenderSeq struct {
