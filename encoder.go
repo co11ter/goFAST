@@ -87,6 +87,7 @@ func (e *Encoder) Encode(msg interface{}) error {
 	}
 	e.tid = e.msg.GetTemplateID()
 
+	// TODO have to implement optional template id
 	tpl, ok := e.repo[e.tid]
 	if !ok {
 		return ErrD9
