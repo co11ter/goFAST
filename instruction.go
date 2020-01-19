@@ -313,7 +313,7 @@ func (i *Instruction) extractDecimal(reader *reader, s storage, pmap *pMap) (int
 		}
 		if in.Type == TypeExponent {
 			eField, err := in.extract(reader, s, pmap)
-			if err != nil {
+			if err != nil || eField == nil {
 				return nil, err
 			}
 			exponent = eField.(int32)

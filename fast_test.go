@@ -14,6 +14,7 @@ type decimalType struct {
 	MandatoryDecimal     float64
 	IndividualDecimal    float64
 	IndividualDecimalOpt float64
+	IndividualDecimalOptExpNotPresent *float64
 }
 
 type sequenceType struct {
@@ -199,12 +200,20 @@ func (br *benchmarkReceiver) SetValue(field *fast.Field) {
 
 var (
 	decimalData1    = []byte{0xf8, 0x81, 0xfe, 0x4, 0x83, 0xff, 0xc, 0x8a, 0xfc, 0xa0, 0xff, 0x0, 0xef}
+	decimalData2    = []byte{0xfc, 0x81, 0xfe, 0x4, 0x83, 0xff, 0xc, 0x8a, 0xfc, 0xa0, 0x80}
 	decimalMessage1 = decimalType{
 		TemplateID:           1,
 		CopyDecimal:          5.15,
 		MandatoryDecimal:     154.6,
 		IndividualDecimal:    0.0032,
 		IndividualDecimalOpt: 11.1,
+	}
+	decimalMessage2 = decimalType{
+		TemplateID:           1,
+		CopyDecimal:          5.15,
+		MandatoryDecimal:     154.6,
+		IndividualDecimal:    0.0032,
+		IndividualDecimalOpt: 0,
 	}
 
 	value      uint32 = 2

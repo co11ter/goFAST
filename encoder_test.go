@@ -44,6 +44,8 @@ func encode(msg interface{}, expect []byte, t *testing.T) {
 
 func TestDecimalEncode(t *testing.T) {
 	encode(&decimalMessage1, decimalData1, t)
+	// TODO have to provide decimal interface to set mantissa end exponent separately
+	//encode(&decimalMessage2, decimalData2, t)
 }
 
 func TestSequenceEncode(t *testing.T) {
