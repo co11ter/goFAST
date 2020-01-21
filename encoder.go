@@ -12,7 +12,7 @@ import (
 
 // A Encoder encodes and writes data to io.Writer.
 type Encoder struct {
-	repo map[uint]*Template
+	repo map[uint]Template
 	storage storage
 
 	tid uint // template id
@@ -39,13 +39,13 @@ func (e *Encoder) Reset() {
 // NewEncoder returns a new encoder that writes FAST-encoded message to writer.
 func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 	encoder := &Encoder{
-		repo: make(map[uint]*Template),
+		repo: make(map[uint]Template),
 		storage: make(map[string]interface{}),
 		target: writer,
 		pmc: newPMapCollector(),
 	}
 	for _, t := range tmps {
-		encoder.repo[t.ID] = t
+		encoder.repo[t.ID] = *t
 	}
 	return encoder
 }

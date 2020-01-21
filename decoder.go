@@ -12,7 +12,7 @@ import (
 // A Decoder reads and decodes FAST-encoded message from an io.Reader.
 // You may need buffered reader since decoder reads data byte by byte.
 type Decoder struct {
-	repo map[uint]*Template
+	repo map[uint]Template
 	storage storage
 
 	tid uint // template id
@@ -28,13 +28,13 @@ type Decoder struct {
 // NewDecoder returns a new decoder that reads from reader.
 func NewDecoder(reader io.Reader, tmps ...*Template) *Decoder {
 	decoder := &Decoder{
-		repo: make(map[uint]*Template),
+		repo: make(map[uint]Template),
 		storage: newStorage(),
 		reader: newReader(reader),
 		pmc: newPMapCollector(),
 	}
 	for _, t := range tmps {
-		decoder.repo[t.ID] = t
+		decoder.repo[t.ID] = *t
 	}
 	return decoder
 }
