@@ -10,6 +10,7 @@ var (
 	// ErrS1 is a static error if templates encoded in the concrete XML syntax are in
 	// fact not well-formed, do not follow the rules of XML namespaces or are invalid
 	// with respect to the schema in Appendix 1 in FAST 1.1 specification.
+	// TODO have to find native lib to check xml syntax
 	ErrS1 = errors.New("static error: S1")
 
 	// ErrS2 is a static error if an operator is specified for a field of a type to

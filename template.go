@@ -77,7 +77,7 @@ const (
 	OperatorDefault
 	OperatorCopy
 	OperatorIncrement // It's applicable to integer field types
-	OperatorTail // It's applicable to string and byte vector field types
+	OperatorTail      // It's applicable to string and byte vector field types
 
 	PresenceMandatory InstructionPresence = iota
 	PresenceOptional
@@ -279,7 +279,17 @@ func (p *xmlParser) parseOperation(token *xml.StartElement, instruction *Instruc
 	var err error
 	instruction.Value, err = newValue(token, instruction.Type)
 	if err != nil {
-		return err
+		return ErrS3
+	}
+
+	if instruction.Operator == OperatorConstant && instruction.Value == nil {
+		return ErrS4
+	}
+
+	if instruction.Presence == PresenceMandatory &&
+		instruction.Operator == OperatorDefault &&
+		instruction.Value == nil {
+		return ErrS5
 	}
 
 	for {
@@ -297,7 +307,7 @@ func (p *xmlParser) parseOperation(token *xml.StartElement, instruction *Instruc
 }
 
 func newInstruction(token *xml.StartElement) (*Instruction, error) {
-	instruction := &Instruction{Operator: OperatorNone}
+	instruction := &Instruction{Operator: OperatorNone, Presence: PresenceMandatory}
 
 	switch token.Name.Local {
 	case tagString:
