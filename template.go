@@ -90,6 +90,27 @@ type Template struct {
 	Instructions []*Instruction
 }
 
+func (t *Template) clone() (res Template) {
+	res = *t
+	res.Instructions = cloneInstructions(t.Instructions)
+	return res
+}
+
+func cloneInstructions(data []*Instruction) []*Instruction {
+	if data == nil {
+		return nil
+	}
+
+	res := make([]*Instruction, len(data))
+	copy(res, data)
+
+	for _, i := range res {
+		i.Instructions = cloneInstructions(i.Instructions)
+	}
+
+	return res
+}
+
 type xmlParser struct {
 	decoder *xml.Decoder
 }

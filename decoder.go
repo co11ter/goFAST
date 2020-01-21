@@ -34,7 +34,7 @@ func NewDecoder(reader io.Reader, tmps ...*Template) *Decoder {
 		pmc: newPMapCollector(),
 	}
 	for _, t := range tmps {
-		decoder.repo[t.ID] = *t
+		decoder.repo[t.ID] = t.clone()
 	}
 	return decoder
 }

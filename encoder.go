@@ -45,7 +45,7 @@ func NewEncoder(writer io.Writer, tmps ...*Template) *Encoder {
 		pmc: newPMapCollector(),
 	}
 	for _, t := range tmps {
-		encoder.repo[t.ID] = *t
+		encoder.repo[t.ID] = t.clone()
 	}
 	return encoder
 }
