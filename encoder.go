@@ -108,20 +108,27 @@ func (e *Encoder) Encode(msg interface{}) error {
 
 func (e *Encoder) addWriter() {
 	if e.logger != nil {
-		e.writers = append(e.writers, newWriter(e.logger, wrapWriterLog(e.logger.log)))
+		e.writers = append(e.writers, newWriter(wrapWriterLog(e.logger.log), wrapWriterLog(e.logger.log)))
 	} else {
 		e.writers = append(e.writers, newWriter(&bytes.Buffer{}, &bytes.Buffer{}))
 	}
 	e.writerIndex = len(e.writers) -1
 }
 
-func (e *Encoder) commit() error {
-	tmp := &bytes.Buffer{}
-	for _, writer := range e.writers {
-		writer.WriteTo(tmp)
+func (e *Encoder) delWriterTo(index int) {
+	if e.logger != nil {
+		e.log("rewrite from buffer <- ")
 	}
-	_, err := tmp.WriteTo(e.target)
-	return err
+	for i:=index+1; i<=len(e.writers)-1; i++ {
+		e.writers[i].WriteTo(e.writers[index])
+	}
+	e.writers = e.writers[:index+1]
+}
+
+func (e *Encoder) commit() error {
+	// TODO have to check err
+	e.writers[e.writerIndex].WriteTo(e.target)
+	return nil
 }
 
 func (e *Encoder) acceptTemplateID(id uint32) {
@@ -202,6 +209,7 @@ func (e *Encoder) encodeGroup(instruction *Instruction) error {
 	releaseField(parent)
 
 	e.pmc.restore()
+	e.delWriterTo(current)
 	e.writerIndex = current // restore index
 	return nil
 }
@@ -247,6 +255,7 @@ func (e *Encoder) encodeSequence(instruction *Instruction) error {
 		}
 		e.msg.Unlock()
 		e.pmc.restore()
+		e.delWriterTo(current)
 	}
 	releaseField(parent)
 	e.writerIndex = current // restore index

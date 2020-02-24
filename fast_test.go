@@ -25,6 +25,9 @@ type sequenceType struct {
 			InnerTestData uint32
 		}
 	}
+	NextOuterSequence []*struct {
+		NextOuterTestData *uint32
+	}
 }
 
 type byteVectorType struct {
@@ -219,8 +222,7 @@ var (
 		{InnerTestData: 3},
 		{InnerTestData: 4},
 	}
-
-	sequenceData1    = []byte{0xc0, 0x82, 0x81, 0x81, 0x82, 0x83, 0x83, 0x84}
+	sequenceData1    = []byte{0xc0, 0x82, 0x81, 0x81, 0x82, 0x83, 0x83, 0x84, 0x81, 0x82}
 	sequenceMessage1 = sequenceType{
 		TemplateID: 2,
 		TestData:   1,
@@ -233,6 +235,13 @@ var (
 			{
 				OuterTestData: &value,
 				InnerSequence: &secSegment,
+			},
+		},
+		NextOuterSequence: []*struct {
+			NextOuterTestData *uint32
+		}{
+			{
+				NextOuterTestData: &value,
 			},
 		},
 	}

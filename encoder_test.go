@@ -27,6 +27,7 @@ func init() {
 
 	writer = &bytes.Buffer{}
 	encoder = fast.NewEncoder(writer, tpls...)
+	//encoder.SetLog(os.Stdout)
 }
 
 func encode(msg interface{}, expect []byte, t *testing.T) {
@@ -36,7 +37,7 @@ func encode(msg interface{}, expect []byte, t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(writer.Bytes(), expect) {
-		t.Fatal("data is not equal. current: ", writer.Bytes(), " expected: ", expect)
+		t.Fatalf("data is not equal. current: %x expected: %x", writer.Bytes(), expect)
 	}
 
 	writer.Reset()
