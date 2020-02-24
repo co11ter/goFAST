@@ -31,6 +31,10 @@
                 <uInt32 name="InnerTestData" id="5"/>
             </sequence>
         </sequence>
+        <sequence name="NextOuterSequence">
+            <length name="NoNextOuterSequence" id="6"/>
+            <uInt32 name="NextOuterTestData" id="7"/>
+        </sequence>
     </template>
 
     <template name="ByteVector" id="3" xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
