@@ -18,4 +18,8 @@ func newMantExp(f float64) (int64, int32) {
 	return d.Coefficient().Int64(), d.Exponent()
 }
 
+func expDecimal(f float64) int32 {
+	return decimal.NewFromFloat(f).Exponent()
+}
+
 
