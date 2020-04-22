@@ -13,7 +13,7 @@ import (
 
 const (
 	uintSize = 32 << (^uint(0) >> 32 & 1)
-	maxInt  = 1<<(uintSize-1) - 1
+	maxInt = 1<<(uintSize-1) - 1
 	maxUint = 1<<uintSize - 1
 )
 
@@ -191,7 +191,7 @@ func castIntTo(src int64, dst interface{}) (err error) {
 		}
 	case *uint:
 		*dst.(*uint) = uint(src)
-		if src > maxUint {
+		if uint(src) > maxUint {
 			err = ErrR4
 		}
 	case *uint64:
